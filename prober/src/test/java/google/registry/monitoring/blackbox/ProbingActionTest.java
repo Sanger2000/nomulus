@@ -47,9 +47,12 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ProbingActionTest {
   private final String TEST_MESSAGE = "MESSAGE_TEST";
-  private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
-  private final LocalAddress address = new LocalAddress("TEST_ADDRESS");
+  private final String PROTOCOL_NAME = "TEST_PROTOCOL";
+  private final String ADDRESS_NAME = "TEST_ADDRESS";
+  private final int TEST_PORT = 0;
 
+  private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+  private final LocalAddress address = new LocalAddress(ADDRESS_NAME);
   private Bootstrap bootstrap = new Bootstrap()
     .group(eventLoopGroup)
     .channel(LocalChannel.class);
@@ -63,8 +66,8 @@ public class ProbingActionTest {
   private EmbeddedChannel channel;
   private Protocol protocol = Protocol.builder()
       .handlerProviders(ImmutableList.of(provider))
-      .name("TEST_PROTOCOL")
-      .port(0)
+      .name(PROTOCOL_NAME)
+      .port(TEST_PORT)
       .build()
       .address(address);
 

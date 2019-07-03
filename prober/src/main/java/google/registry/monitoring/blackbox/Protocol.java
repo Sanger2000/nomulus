@@ -42,7 +42,7 @@ public abstract class Protocol {
   private String host;
   private LocalAddress address;
   private String path = "";
-  private ProbingAction<?> probingAction;
+  private ProbingAction probingAction;
 
   /** Setter method for Protocol's host*/
   public Protocol host(String host) {
@@ -67,7 +67,7 @@ public abstract class Protocol {
   }
 
   /** Setter method for Protocol's ProbingAction parent*/
-  public Protocol probingAction(ProbingAction<?> probingAction) {
+  public Protocol probingAction(ProbingAction probingAction) {
     this.probingAction = probingAction;
     return this;
   }
@@ -84,7 +84,7 @@ public abstract class Protocol {
   }
 
   /** Getter method for Protocol's path*/
-  public ProbingAction<?> probingAction() {
+  public ProbingAction probingAction() {
     return probingAction;
   }
 

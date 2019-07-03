@@ -24,14 +24,14 @@ import io.netty.channel.ChannelFuture;
  * Subclass of ProbingAction that takes in an existing channel
  */
 @AutoValue
-public abstract class ExistingChannelAction<O> extends ProbingAction<O> {
+public abstract class ExistingChannelAction extends ProbingAction {
 
-  public static <O> ExistingChannelAction.Builder<O> builder() {
-    return new AutoValue_ExistingChannelAction.Builder<O>();
+  public static ExistingChannelAction.Builder builder() {
+    return new AutoValue_ExistingChannelAction.Builder();
   }
 
   @Override
-  public abstract Builder<O> toBuilder();
+  public abstract Builder toBuilder();
 
   @Override
   public ChannelFuture call() {
@@ -39,9 +39,9 @@ public abstract class ExistingChannelAction<O> extends ProbingAction<O> {
   }
 
   @AutoValue.Builder
-  public static abstract class Builder<O> extends ProbingAction.Builder<O, Builder<O>, ExistingChannelAction<O>> {
+  public static abstract class Builder extends ProbingAction.Builder<Builder, ExistingChannelAction> {
     //specifies channel in this builder
-    public abstract Builder<O> channel(Channel channel);
+    public abstract Builder channel(Channel channel);
   }
 }
 

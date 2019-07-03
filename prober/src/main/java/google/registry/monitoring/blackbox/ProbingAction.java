@@ -19,6 +19,7 @@ import static com.google.common.flogger.StackSize.SMALL;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
+import google.registry.monitoring.blackbox.messages.OutboundMarker;
 import io.netty.util.AttributeKey;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.Duration;
@@ -38,7 +39,7 @@ import javax.inject.Provider;
  */
 
 
-public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
+public abstract class ProbingAction implements Callable<ChannelFuture> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -47,13 +48,13 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
 
 
   /** {@link ActionHandler} Associated with this {@link ProbingAction}*/
-  private ActionHandler<?, O> actionHandler;
+  private ActionHandler actionHandler;
 
 
   /**
    * The requisite instance of {@link ActionHandler}, which is always the last {@link ChannelHandler} in the pipeline
    */
-  private ActionHandler<?, O> actionHandler() {
+  private ActionHandler actionHandler() {
     return actionHandler;
   }
 
@@ -66,7 +67,7 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
   public abstract Duration delay();
 
   /** message to send to server */
-  public abstract O outboundMessage();
+  public abstract OutboundMarker outboundMessage();
 
   /**
    * @return {@link Channel} object that represents connection between prober client and server
@@ -82,7 +83,7 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
    *
    * @return {@link Builder} that lets us build a new ProbingAction by customizing abstract methods
    */
-  public abstract <O, B extends Builder<O, B, P>, P extends ProbingAction<O>> Builder<O, B, P> toBuilder();
+  public abstract <B extends Builder<B, P>, P extends ProbingAction> Builder<B, P> toBuilder();
 
 
   /**
@@ -96,7 +97,7 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
     //Sets Action Handler to appropriately the last channel in the pipeline
     //Logs severe if the last channel in the pipeline is not
     try {
-      this.actionHandler = (ActionHandler<?, O>) this.channel().pipeline().last();
+      this.actionHandler = (ActionHandler) this.channel().pipeline().last();
     } catch (ClassCastException exception) {
       logger.atSevere().withStackTrace(SMALL).log("Last Handler in the ChannelPipeline is not an ActionHandler");
     }
@@ -109,7 +110,7 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
       timer.newTimeout(timeout -> {
             // Write appropriate message to pipeline
             ChannelFuture channelFuture = actionHandler().apply(outboundMessage());
-
+            System.out.println("test1");
             channelFuture.addListeners(
                 future -> actionHandler().resetFuture(),
                 future -> finished.setSuccess());
@@ -128,11 +129,11 @@ public abstract class ProbingAction<O> implements Callable<ChannelFuture> {
     return finished;
   }
 
-  public abstract static class Builder<O, B extends Builder<O, B, P>, P extends ProbingAction<O>> {
+  public abstract static class Builder<B extends Builder<B, P>, P extends ProbingAction> {
 
     public abstract B delay(Duration value);
 
-    public abstract B outboundMessage(O value);
+    public abstract B outboundMessage(OutboundMarker value);
 
     public abstract B protocol(Protocol value);
 

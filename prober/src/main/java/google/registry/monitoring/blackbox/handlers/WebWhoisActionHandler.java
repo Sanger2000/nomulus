@@ -21,12 +21,17 @@ import google.registry.monitoring.blackbox.NewChannelAction;
 import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Prober;
 import google.registry.monitoring.blackbox.Protocol;
+import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
+import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
+import google.registry.monitoring.blackbox.messages.InboundMarker;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -35,7 +40,7 @@ import java.net.URL;
 import javax.inject.Inject;
 import org.joda.time.Duration;
 
-public class WebWhoisActionHandler extends ActionHandler<HttpResponse, HttpRequest> {
+public class WebWhoisActionHandler extends ActionHandler{
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -43,15 +48,19 @@ public class WebWhoisActionHandler extends ActionHandler<HttpResponse, HttpReque
   public WebWhoisActionHandler() {}
 
   /** Method needed for workaround in order to create ProbingAction builder with Channel type specified by the current channel type */
-  private <C extends AbstractChannel> NewChannelAction.Builder<HttpRequest, C> createBuilder(
-      Class<? extends Channel> className, ProbingAction<HttpRequest> currentAction) {
-    return ((NewChannelAction<HttpRequest, C>) currentAction).toBuilder();
+  private <C extends AbstractChannel> NewChannelAction.Builder<C> createBuilder(
+      Class<? extends Channel> className, ProbingAction currentAction) {
+    return ((NewChannelAction<C>) currentAction).toBuilder();
   }
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, HttpResponse response) throws Exception{
+  public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+    System.out.println("test");
+    //HttpResponseMessage response = (HttpResponseMessage) msg;
+    FullHttpResponse response = msg;
+
     if (response.status() == HttpResponseStatus.OK) {
-      logger.atInfo().log("Recieved Successful HttpResponseStatus");
+      logger.atInfo().log("Received Successful HttpResponseStatus");
       finished.setSuccess();
       System.out.println(response);
 
@@ -70,7 +79,7 @@ public class WebWhoisActionHandler extends ActionHandler<HttpResponse, HttpReque
       Protocol oldProtocol = ctx.channel().attr(PROTOCOL_KEY).get();
 
       //Build new Protocol from new attributes
-      ProbingAction<HttpRequest> currentAction = (ProbingAction<HttpRequest>) oldProtocol.probingAction();
+      ProbingAction currentAction = oldProtocol.probingAction();
 
       //Construct new Protocol to reflect redirected host, path, and port
       Protocol newProtocol = Prober.portToProtocolMap.get(newPort).toBuilder().build()
@@ -78,11 +87,12 @@ public class WebWhoisActionHandler extends ActionHandler<HttpResponse, HttpReque
           .path(newPath);
 
       //Modify HttpRequest sent to remote host to reflect new path and host
-      FullHttpRequest httpRequest = ((DefaultFullHttpRequest) currentAction.outboundMessage()).setUri(newPath);
+
+      HttpRequestMessage httpRequest = ((HttpRequestMessage) currentAction.outboundMessage()).setUri(newPath);
       httpRequest.headers().set(HttpHeaderNames.HOST, newHost);
 
       //Create new probingAction that takes in the new Protocol and HttpRequest message
-      ProbingAction<HttpRequest> redirectedAction = createBuilder(ctx.channel().getClass(), currentAction)
+      ProbingAction redirectedAction = createBuilder(ctx.channel().getClass(), currentAction)
           .protocol(newProtocol)
           .outboundMessage(httpRequest)
           .delay(Duration.ZERO)

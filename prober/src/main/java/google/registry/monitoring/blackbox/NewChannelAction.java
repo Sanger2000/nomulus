@@ -32,7 +32,7 @@ import io.netty.channel.ChannelPromise;
  * Subclass of ProbingAction where each instance creates a new channel
  */
 @AutoValue
-public abstract class NewChannelAction<O, C extends AbstractChannel> extends ProbingAction<O> {
+public abstract class NewChannelAction<C extends AbstractChannel> extends ProbingAction {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -55,7 +55,7 @@ public abstract class NewChannelAction<O, C extends AbstractChannel> extends Pro
 
 
   @Override
-  public abstract Builder<O, C> toBuilder();
+  public abstract Builder<C> toBuilder();
 
   /**
    * Creates channel from bootstrap and protocol given to instance
@@ -116,15 +116,15 @@ public abstract class NewChannelAction<O, C extends AbstractChannel> extends Pro
     return finished;
   }
 
-  public static <O, C extends AbstractChannel> NewChannelAction.Builder<O, C> builder() {
+  public static <C extends AbstractChannel> NewChannelAction.Builder<C> builder() {
     return new AutoValue_NewChannelAction.Builder<>();
   }
 
 
   @AutoValue.Builder
-  public static abstract class Builder<O, C extends AbstractChannel> extends ProbingAction.Builder<O, Builder<O, C>, NewChannelAction<O, C>> {
+  public static abstract class Builder<C extends AbstractChannel> extends ProbingAction.Builder<Builder<C>, NewChannelAction<C>> {
     //specifies bootstrap in this builder
-    public abstract NewChannelAction.Builder<O, C> bootstrap(Bootstrap value);
+    public abstract NewChannelAction.Builder<C> bootstrap(Bootstrap value);
 
   }
 
