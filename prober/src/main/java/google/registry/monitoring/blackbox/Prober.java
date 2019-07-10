@@ -29,6 +29,7 @@ public class Prober {
 
   public static void main(String[] args) {
 
+
     ProbingSequence<NioSocketChannel> sequence = new ProbingSequence.Builder<NioSocketChannel>()
         .eventLoopGroup(eventGroup)
         .addStep(new ProbingStepWeb<>(portToProtocolMap.get(80)))
@@ -37,7 +38,6 @@ public class Prober {
         .build();
 
     sequence.start(Prober.proberComponent);
-
-
   }
 }
+

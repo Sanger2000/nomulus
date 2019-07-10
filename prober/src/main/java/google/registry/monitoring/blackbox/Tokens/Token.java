@@ -29,7 +29,7 @@ public abstract class Token {
 
   public abstract Token next(ProbingStep<? extends AbstractChannel> nextAction);
   public abstract OutboundMarker modifyMessage(OutboundMarker message);
-  public abstract Protocol modifyProtocol(Protocol original);
+  public abstract String getHost();
 
   public abstract Channel channel();
 

@@ -22,11 +22,49 @@ import dagger.Provides;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import google.registry.monitoring.blackbox.WebWhoisModule.HttpWhoisProtocol;
 import google.registry.monitoring.blackbox.WebWhoisModule.HttpsWhoisProtocol;
+import google.registry.monitoring.blackbox.WebWhoisModule.WhoisProtocol;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import java.nio.channels.Channel;
 import java.util.Set;
+import javax.inject.Qualifier;
 import javax.inject.Singleton;
 
 @Module
 public class ProberModule {
+
+  @Provides
+  EventLoopGroup provideEventLoopGroup() {
+    return new NioEventLoopGroup();
+  }
+
+  @Provides
+  @HttpWhoisProtocol
+  ProbingSequence<NioSocketChannel> provideHttpWhoisSequence(
+      @HttpWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+      EventLoopGroup eventLoopGroup) {
+    return new ProbingSequence.Builder<NioSocketChannel>()
+        .setClass(NioSocketChannel.class)
+        .addStep(probingStep)
+        .makeFirstRepeated()
+        .eventLoopGroup(eventLoopGroup)
+        .build();
+  }
+
+  @Provides
+  @HttpsWhoisProtocol
+  ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence(
+      @HttpsWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+      EventLoopGroup eventLoopGroup) {
+    return new ProbingSequence.Builder<NioSocketChannel>()
+        .setClass(NioSocketChannel.class)
+        .addStep(probingStep)
+        .makeFirstRepeated()
+        .eventLoopGroup(eventLoopGroup)
+        .build();
+  }
+
 
   private final int httpWhoIsPort = 80;
   private final int httpsWhoIsPort = 443;
@@ -59,7 +97,6 @@ public class ProberModule {
           TokenModule.class
       })
   public interface ProberComponent {
-
 
     ImmutableMap<Integer, Protocol> providePortToProtocolMap();
 

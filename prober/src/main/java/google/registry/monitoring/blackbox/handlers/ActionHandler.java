@@ -15,18 +15,12 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.common.flogger.StackSize;
 import google.registry.monitoring.blackbox.messages.InboundMarker;
 import google.registry.monitoring.blackbox.messages.OutboundMarker;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponse;
-import java.util.function.Function;
 
 /**
  *
@@ -35,46 +29,35 @@ import java.util.function.Function;
  * Abstract class that tells sends message down pipeline and
  * and tells listeners to move on when the message is received.
  */
-public abstract class ActionHandler extends SimpleChannelInboundHandler<FullHttpResponse>
-    implements Function<OutboundMarker, ChannelFuture> {
+public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundMarker> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   protected ChannelPromise finished;
-  private Channel channel;
-
+  protected OutboundMarker outboundMessage;
 
   /** Writes and flushes specified outboundMessage to channel pipeline and returns future
    * that is marked as success when ActionHandler next reads from the channel */
-  @Override
-  public ChannelFuture apply(OutboundMarker outboundMessage) {
-    channel.writeAndFlush(outboundMessage);
-    System.out.println(outboundMessage);
-    System.out.println();
+  public ChannelFuture getFuture(OutboundMarker outboundMessage) {
+    this.outboundMessage = outboundMessage;
     return finished;
-
-  }
-
-  public void resetFuture() {
-    finished = channel.newPromise();
   }
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) {
     //Once handler is added to channel pipeline, initialize channel and future for this handler
-    channel = ctx.channel();
     finished = ctx.newPromise();
   }
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse inboundMessage) throws Exception{
+  public void channelRead0(ChannelHandlerContext ctx, InboundMarker inboundMessage) throws Exception {
     //simply marks finished as success
     finished.setSuccess();
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    logger.atSevere().withCause(cause).withStackTrace(StackSize.FULL).log("Exception Caught");
+    logger.atSevere().withCause(cause).log("error");
   }
 }
 

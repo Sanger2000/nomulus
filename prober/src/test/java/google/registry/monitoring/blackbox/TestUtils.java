@@ -17,8 +17,15 @@ package google.registry.monitoring.blackbox;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
+import google.registry.monitoring.blackbox.Tokens.Token;
+import google.registry.monitoring.blackbox.messages.InboundMarker;
+import google.registry.monitoring.blackbox.messages.OutboundMarker;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
@@ -32,6 +39,9 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.util.concurrent.DefaultPromise;
+import javax.inject.Provider;
+import org.joda.time.Duration;
 
 /** Utility class for various helper methods used in testing. */
 public class TestUtils {
@@ -115,6 +125,125 @@ public class TestUtils {
       response.headers().add("set-cookie", ServerCookieEncoder.STRICT.encode(cookie));
     }
     return response;
+  }
+
+  public static class TestProvider<E> implements Provider<E> {
+
+    private E obj;
+
+    public TestProvider(E obj) {
+      this.obj = obj;
+    }
+
+    @Override
+    public E get() {
+      return obj;
+    }
+  }
+
+  public static class DuplexMessageTest implements OutboundMarker, InboundMarker {
+
+    String message;
+
+    public DuplexMessageTest() {
+      message = "";
+    }
+
+    public DuplexMessageTest(String msg) {
+      message = msg;
+    }
+
+    @Override
+    public String toString() {
+      return message;
+    }
+  }
+
+  /** Probing Step subclass that performs probing Steps functions, with time delay and minor exception handling */
+  public static class TestStep extends ProbingStep<LocalChannel> {
+
+    private String testMessage;
+
+    public TestStep(Protocol protocol, String testMessage) {
+      this.protocol = protocol;
+      this.testMessage = testMessage;
+      duration = Duration.ZERO;
+    }
+    @Override
+    protected DuplexMessageTest message() {
+      return new DuplexMessageTest(testMessage);
+    }
+
+  }
+
+  /** Probing Step subclass that is solely used to note when the previous Probing Step has completed its action */
+  public static class DummyStep extends ProbingStep<LocalChannel> {
+    private DefaultPromise<Token> future;
+
+    public DummyStep(EventLoopGroup eventLoopGroup) {
+      future = new DefaultPromise<Token>(eventLoopGroup.next()) {};
+      duration = Duration.ZERO;
+    }
+    @Override
+    protected DuplexMessageTest message() {
+      return new DuplexMessageTest();
+    }
+
+    @Override
+    public void accept(Token token) {
+      future.setSuccess(token);
+    }
+    public DefaultPromise<Token> getFuture() {
+      return future;
+    }
+  }
+
+  /** Basic outline for Token Instances to be used in tests */
+  private static abstract class TestToken extends Token {
+    private String host;
+
+    protected TestToken(String host) {
+      this.host = host;
+    }
+    @Override
+    public Token next(ProbingStep<? extends AbstractChannel> nextAction) {
+      return this;
+    }
+
+    @Override
+    public OutboundMarker modifyMessage(OutboundMarker message) {
+      return message;
+    }
+
+    @Override
+    public String getHost() {
+      return host;
+    }
+
+  }
+  /** TestToken instance that creates new channel */
+  public static class NewChannelToken extends TestToken {
+    public NewChannelToken(String host) {
+      super(host);
+    }
+    @Override
+    public Channel channel() {
+      return null;
+    }
+  }
+
+  /** Token instance that passes in existing channel */
+  public static class ExistingChannelToken extends TestToken {
+    private Channel channel;
+
+    public ExistingChannelToken(Channel channel, String host) {
+      super(host);
+      this.channel = channel;
+    }
+    @Override
+    public Channel channel() {
+      return channel;
+    }
   }
 
   /**

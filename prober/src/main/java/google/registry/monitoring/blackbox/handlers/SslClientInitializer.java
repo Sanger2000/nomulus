@@ -15,12 +15,12 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
-
+import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 
+import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -66,14 +66,16 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
 
   @Override
   protected void initChannel(C channel) throws Exception {
-    Protocol protocol = channel.attr(PROTOCOL_KEY).get();
+    ProbingAction action = channel.attr(PROBING_ACTION_KEY).get();
+    Protocol protocol = action.protocol();
+
     checkNotNull(protocol, "Protocol is not set for channel: %s", channel);
     SslHandler sslHandler =
         SslContextBuilder.forClient()
             .sslProvider(sslProvider)
             .trustManager(trustedCertificates)
             .build()
-            .newHandler(channel.alloc(), protocol.host(), protocol.port());
+            .newHandler(channel.alloc(), action.host(), protocol.port());
 
     // Enable hostname verification.
     SSLEngine sslEngine = sslHandler.engine();

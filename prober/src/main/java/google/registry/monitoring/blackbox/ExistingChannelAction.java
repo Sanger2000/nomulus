@@ -27,7 +27,7 @@ import io.netty.channel.ChannelFuture;
 public abstract class ExistingChannelAction extends ProbingAction {
 
   public static ExistingChannelAction.Builder builder() {
-    return new AutoValue_ExistingChannelAction.Builder();
+    return new AutoValue_ExistingChannelAction.Builder().path("");
   }
 
   @Override
@@ -35,6 +35,7 @@ public abstract class ExistingChannelAction extends ProbingAction {
 
   @Override
   public ChannelFuture call() {
+    channel().attr(PROBING_ACTION_KEY).set(this);
     return super.call();
   }
 

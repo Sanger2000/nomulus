@@ -14,6 +14,25 @@
 
 package google.registry.monitoring.blackbox.handlers;
 
+import google.registry.monitoring.blackbox.messages.InboundMarker;
+import io.netty.channel.ChannelHandlerContext;
+
 //Concrete implementation of ActionHandler that does nothing different from original abstract class
-public class TestActionHandler extends ActionHandler<Object, Object> {}
+public class TestActionHandler extends ActionHandler{
+
+  private String receivedMessage;
+
+  @Override
+  public void channelRead0(ChannelHandlerContext ctx, InboundMarker inboundMessage) throws Exception {
+    receivedMessage = inboundMessage.toString();
+    super.channelRead0(ctx, inboundMessage);
+
+  }
+
+  @Override
+  public String toString() {
+    return receivedMessage;
+  }
+
+}
 

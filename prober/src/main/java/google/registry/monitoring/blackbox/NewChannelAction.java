@@ -27,7 +27,6 @@ import io.netty.channel.ChannelPromise;
 
 /**
  *
- * @param <O> Generic Type of Outbound Message
  * @param <C> For testing Purposes to use different kinds of channels (other than NioSocketChannel)
  * Subclass of ProbingAction where each instance creates a new channel
  */
@@ -76,7 +75,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
             addHandlers(outboundChannel.pipeline(), protocol().handlerProviders());
           }
         })
-        .attr(PROTOCOL_KEY, protocol());
+        .attr(PROBING_ACTION_KEY, this);
 
 
     logger.atInfo().log("Initialized bootstrap with channel Handlers");
@@ -84,8 +83,8 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
 
     ChannelFuture connectionFuture;
 
-    if (protocol().host() != null) {
-      connectionFuture = bootstrap.connect(protocol().host(), protocol().port());
+    if (!host().equals("")) {
+      connectionFuture = bootstrap.connect(host(), protocol().port());
     } else {
       connectionFuture = bootstrap.connect(protocol().address());
     }
@@ -100,7 +99,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
     connectionFuture.addListener(
         (ChannelFuture channelFuture) -> {
           if (channelFuture.isSuccess()) {
-            logger.atInfo().log(String.format("Successful connection to remote host: %s at port: %d", protocol().host(), protocol().port()));
+            logger.atInfo().log(String.format("Successful connection to remote host: %s at port: %d", host(), protocol().port()));
             ChannelFuture future = super.call();
             future.addListener(f -> finished.setSuccess());
 
@@ -117,7 +116,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
   }
 
   public static <C extends AbstractChannel> NewChannelAction.Builder<C> builder() {
-    return new AutoValue_NewChannelAction.Builder<>();
+    return new AutoValue_NewChannelAction.Builder<C>().path("");
   }
 
 

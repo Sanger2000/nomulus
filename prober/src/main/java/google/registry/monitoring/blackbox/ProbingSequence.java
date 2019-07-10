@@ -20,7 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.EventLoopGroup;
 
-class ProbingSequence<C extends AbstractChannel> {
+public class ProbingSequence<C extends AbstractChannel> {
   private ProbingStep<C> firstStep;
   private EventLoopGroup eventGroup;
   private Bootstrap bootstrap;
@@ -38,7 +38,7 @@ class ProbingSequence<C extends AbstractChannel> {
   /**
    * Builder that sequentially adds steps
    */
-  static class Builder<C extends AbstractChannel> {
+  public static class Builder<C extends AbstractChannel> {
     private ProbingStep<C> currentStep;
     private ProbingStep<C> firstStep;
     private ProbingStep<C> firstSequenceStep;
@@ -85,7 +85,8 @@ class ProbingSequence<C extends AbstractChannel> {
       currentStep = currentStep.parent(this).nextStep();
     }
   }
-  private ProbingSequence(ProbingStep<C> firstStep, EventLoopGroup eventLoopGroup, Class<C> classType) {
+  private ProbingSequence(ProbingStep<C> firstStep, EventLoopGroup eventLoopGroup,
+      Class<C> classType) {
     this.firstStep = firstStep;
     this.eventGroup = eventLoopGroup;
     this.bootstrap = new Bootstrap()

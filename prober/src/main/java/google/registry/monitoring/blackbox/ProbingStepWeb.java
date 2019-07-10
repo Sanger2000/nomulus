@@ -33,13 +33,12 @@ public class ProbingStepWeb<C extends AbstractChannel> extends ProbingStep<C>{
   @Inject
   public ProbingStepWeb(Protocol protocol) {
     this.protocol = protocol;
+    duration = DEFAULT_DURATION;
   }
 
   @Override
   public HttpRequestMessage message() {
-      HttpRequestMessage request = new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, protocol.path());
-      request.headers().set(HttpHeaderNames.HOST, protocol.host());
-
+      HttpRequestMessage request = new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
       return request;
   }
 }

@@ -57,20 +57,33 @@ public class WebWhoisModule {
   private static final String HTTPS_PROTOCOL_NAME = "whois_https";
 
 
+  @Provides
+  @HttpWhoisProtocol
+  static ProbingStep<NioSocketChannel> provideHttpWhoisProbingStep(
+      @HttpWhoisProtocol Protocol httpWhoisProtocol) {
+    return new ProbingStepWeb<>(httpWhoisProtocol);
+  }
+
+  @Provides
+  @HttpsWhoisProtocol
+  static ProbingStep<NioSocketChannel> provideHttpsWhoisProbingStep(
+      @HttpsWhoisProtocol Protocol httpsWhoisProtocol) {
+    return new ProbingStepWeb<>(httpsWhoisProtocol);
+  }
+
 
   @Singleton
   @Provides
   @IntoSet
   static Protocol provideHttpWhoisProtocol(
       @HttpWhoisProtocol int httpWhoisPort,
-      @WhoisProtocol String httpWhoisHost,
       @HttpWhoisProtocol ImmutableList<Provider<? extends ChannelHandler>> handlerProviders) {
     return Protocol.builder()
         .name(HTTP_PROTOCOL_NAME)
         .port(httpWhoisPort)
         .handlerProviders(handlerProviders)
-        .build()
-        .host(httpWhoisHost);
+        .persistentConnection(false)
+        .build();
   }
 
 
@@ -79,14 +92,13 @@ public class WebWhoisModule {
   @IntoSet
   static Protocol provideHttpsWhoisProtocol(
       @HttpsWhoisProtocol int httpsWhoisPort,
-      @WhoisProtocol String httpsWhoisHost,
       @HttpsWhoisProtocol ImmutableList<Provider<? extends ChannelHandler>> handlerProviders) {
     return Protocol.builder()
         .name(HTTPS_PROTOCOL_NAME)
         .port(httpsWhoisPort)
         .handlerProviders(handlerProviders)
-        .build()
-        .host(httpsWhoisHost);
+        .persistentConnection(false)
+        .build();
   }
 
   @Provides

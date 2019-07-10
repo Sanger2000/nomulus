@@ -30,7 +30,7 @@ import javax.inject.Provider;
 public abstract class Protocol {
 
   public final static AttributeKey<Protocol> PROTOCOL_KEY = AttributeKey.valueOf("PROTOCOL_KEY");
-
+  private final static LocalAddress DEFAULT_ADDRESS = new LocalAddress("TEST_ADDRESS");
   /**
    * Default names associated with each protocol
    */
@@ -39,59 +39,8 @@ public abstract class Protocol {
   final static String WHOIS_PROTOCOL_NAME =  "WHOIS";
   final static String RDAP_PROTOCOL_NAME = "RDAP";
 
-  private String host;
-  private LocalAddress address;
-  private String path = "";
-  private ProbingAction probingAction;
-
-  /** Setter method for Protocol's host*/
-  public Protocol host(String host) {
-    this.host = host;
-    return this;
-  }
-
-  /** Getter method for Protocol's host*/
-  public String host() {
-    return host;
-  }
-
-  /** Setter method for Protocol's path*/
-  public Protocol path(String path) {
-    this.path = path;
-    return this;
-  }
-
-  /** Getter method for Protocol's path*/
-  public String path() {
-    return path;
-  }
-
-  /** Setter method for Protocol's ProbingAction parent*/
-  public Protocol probingAction(ProbingAction probingAction) {
-    this.probingAction = probingAction;
-    return this;
-  }
-
-  /** Getter method for Protocol's path. ONLY FOR TESTING*/
-  public LocalAddress address() {
-    return address;
-  }
-
-  /** Setter method for Protocol's ProbingAction parent. ONLY FOR TESTING*/
-  public Protocol address(LocalAddress address) {
-    this.address = address;
-    return this;
-  }
-
-  /** Getter method for Protocol's path*/
-  public ProbingAction probingAction() {
-    return probingAction;
-  }
-
-  /** If connection associated with Protocol is persistent, which is only EPP */
-  boolean persistentConnection() {
-    return name().equals(EPP_PROTOCOL_NAME);
-  }
+  /** Local Address of Protocol. ONLY FOR TESTING*/
+  public abstract LocalAddress address();
 
   /** Protocol Name */
   abstract String name();
@@ -102,21 +51,27 @@ public abstract class Protocol {
   /** The {@link ChannelHandler} providers to use for the protocol, in order. */
   abstract ImmutableList<Provider<? extends ChannelHandler>> handlerProviders();
 
+  /** If connection associated with Protocol is persistent, which is only EPP */
+  abstract boolean persistentConnection();
 
   public abstract Builder toBuilder();
 
   public static Builder builder() {
-    return new AutoValue_Protocol.Builder();
+    return new AutoValue_Protocol.Builder().address(DEFAULT_ADDRESS);
   }
 
   @AutoValue.Builder
   public static abstract class Builder {
+
+    public abstract Builder address(LocalAddress value);
 
     public abstract Builder name(String value);
 
     public abstract Builder port(int num);
 
     public abstract Builder handlerProviders(ImmutableList<Provider<? extends ChannelHandler>> providers);
+
+    public abstract Builder persistentConnection(boolean value);
 
     public abstract Protocol build();
   }

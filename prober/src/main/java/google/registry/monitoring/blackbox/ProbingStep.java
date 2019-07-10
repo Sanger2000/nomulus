@@ -28,7 +28,7 @@ import org.joda.time.Duration;
 public abstract class ProbingStep<C extends AbstractChannel> implements Consumer<Token> {
 
 
-  private static final Duration DEFAULT_DURATION = new Duration(2000L);
+  protected static final Duration DEFAULT_DURATION = new Duration(2000L);
   private static final Timer timer = new HashedWheelTimer();
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -37,10 +37,9 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
   private ProbingSequence<C> parent;
 
   protected Protocol protocol;
+  protected Duration duration;
 
   protected abstract OutboundMarker message();
-
-
 
   void lastStep() {
     isLastStep = true;
@@ -63,20 +62,21 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     ProbingAction generatedAction;
 
     OutboundMarker message = token.modifyMessage(message());
-    protocol = token.modifyProtocol(protocol);
 
     if (protocol.persistentConnection()) {
       generatedAction = ExistingChannelAction.builder()
-          .delay(DEFAULT_DURATION)
+          .delay(duration)
           .protocol(protocol)
           .outboundMessage(message)
+          .host(token.getHost())
           .channel(token.channel())
           .build();
     } else {
       generatedAction = NewChannelAction.<C>builder()
-          .delay(DEFAULT_DURATION)
+          .delay(duration)
           .protocol(protocol)
           .outboundMessage(message)
+          .host(token.getHost())
           .bootstrap(parent.getBootstrap())
           .build();
 

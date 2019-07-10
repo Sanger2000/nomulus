@@ -19,7 +19,10 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
+import google.registry.monitoring.blackbox.TestUtils.TestProvider;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
+import google.registry.monitoring.blackbox.handlers.ConversionHandler;
 import google.registry.monitoring.blackbox.handlers.NettyRule;
 import google.registry.monitoring.blackbox.handlers.TestActionHandler;
 import io.netty.bootstrap.Bootstrap;
@@ -47,6 +50,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ProbingActionTest {
   private final String TEST_MESSAGE = "MESSAGE_TEST";
+  private final String SECONDARY_TEST_MESSAGE = "SECONDARY_MESSAGE_TEST";
   private final String PROTOCOL_NAME = "TEST_PROTOCOL";
   private final String ADDRESS_NAME = "TEST_ADDRESS";
   private final int TEST_PORT = 0;
@@ -57,29 +61,48 @@ public class ProbingActionTest {
     .group(eventLoopGroup)
     .channel(LocalChannel.class);
 
+  private ActionHandler testHandler = new TestActionHandler();
+  private ChannelHandler conversionHandler = new ConversionHandler();
 
-  private ActionHandler<Object, Object> testHandler = new TestActionHandler();
-  private Provider<? extends ChannelHandler> provider = new TestProvider<>(testHandler);
+  private Provider<? extends ChannelHandler> testHandlerProvider = new TestProvider<>(testHandler);
+  private Provider<? extends ChannelHandler> conversionHandlerProvider = new TestProvider<>(conversionHandler);
 
-  private ProbingAction<Object> newChannelAction;
-  private ProbingAction<Object> existingChannelAction;
+  private ProbingAction newChannelAction;
+  private ProbingAction existingChannelAction;
   private EmbeddedChannel channel;
-  private Protocol protocol = Protocol.builder()
-      .handlerProviders(ImmutableList.of(provider))
-      .name(PROTOCOL_NAME)
-      .port(TEST_PORT)
-      .build()
-      .address(address);
+  private Protocol protocol;
+
+
 
   @Rule
   public NettyRule nettyRule = new NettyRule(eventLoopGroup);
 
+  private void setupNewChannelProtocol() {
+    protocol = Protocol.builder()
+        .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
+        .name(PROTOCOL_NAME)
+        .port(TEST_PORT)
+        .persistentConnection(false)
+        .address(address)
+        .build();
+  }
+  private void setupExistingChannelProtocol() {
+    protocol = Protocol.builder()
+        .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
+        .name(PROTOCOL_NAME)
+        .port(TEST_PORT)
+        .persistentConnection(true)
+        .address(address)
+        .build();
+  }
+
   private void setupNewChannelAction() {
-    newChannelAction = NewChannelAction.<Object, LocalChannel>builder()
+    newChannelAction = NewChannelAction.<LocalChannel>builder()
         .bootstrap(bootstrap)
         .protocol(protocol)
         .delay(Duration.ZERO)
-        .outboundMessage(Unpooled.wrappedBuffer(TEST_MESSAGE.getBytes(US_ASCII)))
+        .outboundMessage(new DuplexMessageTest(TEST_MESSAGE))
+        .host("")
         .build();
   }
 
@@ -92,7 +115,8 @@ public class ProbingActionTest {
         .channel(channel)
         .protocol(protocol)
         .delay(Duration.ZERO)
-        .outboundMessage(Unpooled.wrappedBuffer(TEST_MESSAGE.getBytes(US_ASCII)))
+        .outboundMessage(new DuplexMessageTest(TEST_MESSAGE))
+        .host("")
         .build();
   }
 
@@ -100,12 +124,11 @@ public class ProbingActionTest {
   public void testBehavior_existingChannel() {
     //setup
     setupChannel();
+    setupExistingChannelProtocol();
     setupExistingChannelAction(channel);
+    channel.pipeline().addLast(conversionHandler);
     channel.pipeline().addLast(testHandler);
 
-    //makes sure that when setting everything up, we have the right pointers between Protocols
-    //and ProbingActions
-    assertThat(existingChannelAction.protocol().probingAction()).isEqualTo(existingChannelAction);
 
     ChannelFuture future = existingChannelAction.call();
 
@@ -117,19 +140,19 @@ public class ProbingActionTest {
     assertThat(future.isSuccess()).isFalse();
 
     //after writing inbound, we should have a success
-    channel.writeInbound("Should Succeed");
+    channel.writeInbound(Unpooled.wrappedBuffer(SECONDARY_TEST_MESSAGE.getBytes(US_ASCII)));
     assertThat(future.isSuccess()).isTrue();
 
-    //checks that we reset the same actionHandler's future
-    ChannelFuture secondFuture = existingChannelAction.call();
-    assertThat(secondFuture.isSuccess()).isFalse();
+    assertThat(testHandler.toString()).isEqualTo(SECONDARY_TEST_MESSAGE);
+
 
 
   }
 
   @Test
-  public void testSuccess_newChannel() throws Exception{
+  public void testSuccess_newChannel() throws Exception {
     //setup
+    setupNewChannelProtocol();
     setupNewChannelAction();
     nettyRule.setUpServer(address, new ChannelInboundHandlerAdapter());
 
@@ -141,6 +164,7 @@ public class ProbingActionTest {
     future.sync();
     //Tests to see that, since server responds, we have set future to true
     assertThat(future.isSuccess());
+    assertThat(testHandler.toString()).isEqualTo(TEST_MESSAGE);
 
 
   }

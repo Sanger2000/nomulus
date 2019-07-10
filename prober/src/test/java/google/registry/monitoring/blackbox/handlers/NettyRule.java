@@ -17,6 +17,7 @@ package google.registry.monitoring.blackbox.handlers;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 
+import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
 import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 import static google.registry.testing.JUnitBackports.assertThrows;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -24,6 +25,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Throwables;
 import com.google.common.truth.ThrowableSubject;
+import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -97,7 +99,7 @@ public final class NettyRule extends ExternalResource {
   /** Sets up a client channel connecting to the give local address. */
   void setUpClient(
       LocalAddress localAddress,
-      Protocol protocol,
+      ProbingAction probingAction,
       ChannelHandler handler) {
     checkState(echoHandler != null, "Must call setUpServer before setUpClient");
     checkState(dumpHandler == null, "Can't call setUpClient twice");
@@ -117,7 +119,7 @@ public final class NettyRule extends ExternalResource {
             .group(eventLoopGroup)
             .channel(LocalChannel.class)
             .handler(clientInitializer)
-            .attr(PROTOCOL_KEY, protocol);
+            .attr(PROBING_ACTION_KEY, probingAction);
     channel = b.connect(localAddress).syncUninterruptibly().channel();
   }
 

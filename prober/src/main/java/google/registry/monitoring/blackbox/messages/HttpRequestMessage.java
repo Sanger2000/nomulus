@@ -2,6 +2,7 @@ package google.registry.monitoring.blackbox.messages;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -21,6 +22,17 @@ public class HttpRequestMessage extends DefaultFullHttpRequest implements Outbou
   public HttpRequestMessage setUri(String path) {
     super.setUri(path);
     return this;
+  }
+
+  public static HttpRequestMessage fromRequest(FullHttpRequest request) {
+    ByteBuf buf = request.content();
+
+    if (buf == null) {
+      return new HttpRequestMessage(HttpVersion.HTTP_1_1, request.method(), request.uri());
+    } else {
+     return new HttpRequestMessage(HttpVersion.HTTP_1_1, request.method(), request.uri(), buf);
+    }
+
   }
 
 }

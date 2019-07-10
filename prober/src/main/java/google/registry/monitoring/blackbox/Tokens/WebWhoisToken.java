@@ -29,7 +29,7 @@ public class WebWhoisToken extends Token {
 
   @Inject
   public WebWhoisToken(@WebWhoIs String domainName) {
-    this.domainName = domainName;
+    host = domainName;
   }
 
   @Override
@@ -40,18 +40,15 @@ public class WebWhoisToken extends Token {
   @Override
   public OutboundMarker modifyMessage(OutboundMarker original) {
     HttpRequestMessage request = (HttpRequestMessage) original;
-    String originalHost = request.headers().get("host");
-    host = originalHost.substring(0, originalHost.lastIndexOf('.')+1) + domainName;
     request.headers().set("host", host);
 
     return request;
 
   }
   @Override
-  public Protocol modifyProtocol(Protocol original) {
-    return original.host(host);
+  public String getHost() {
+    return host;
   }
-
 
   @Override
   public Channel channel() { return null; }

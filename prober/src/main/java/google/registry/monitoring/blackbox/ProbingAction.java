@@ -79,6 +79,10 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
    */
   public abstract Protocol protocol();
 
+  public abstract String host();
+
+  public abstract String path();
+
   /**
    *
    * @return {@link Builder} that lets us build a new ProbingAction by customizing abstract methods
@@ -86,6 +90,30 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
   public abstract <B extends Builder<B, P>, P extends ProbingAction> Builder<B, P> toBuilder();
 
 
+  /** Performs the action specified by the ProbingAction and sets the ChannelPromise specified to a success */
+  private void informListeners(ChannelPromise finished) {
+    ChannelFuture channelFuture = actionHandler().getFuture(outboundMessage());
+    channel().writeAndFlush(outboundMessage());
+    channelFuture.addListeners(
+        future -> finished.setSuccess(),
+        future -> {
+          if (!protocol().persistentConnection()) {
+
+            //If we created a new channel for this action, close the connection to the channel
+            ChannelFuture closedFuture = channel().close();
+            closedFuture.addListener(
+                f -> {
+                  if (f.isSuccess())
+                    logger.atInfo().log("Closed stale channel. Moving on to next ProbingStep");
+                  else
+                    logger.atWarning()
+                        .log("Could not close channel. Stale connection still exists.");
+                }
+            );
+          }
+        }
+    );
+  }
   /**
    * The method that calls the {@link ActionHandler} to send a message down the channel pipeline
    * @return future that denotes when the action has been successfully performed
@@ -102,28 +130,20 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
       logger.atSevere().withStackTrace(SMALL).log("Last Handler in the ChannelPipeline is not an ActionHandler");
     }
 
-
+    //ChannelPromise that we use to inform ProbingStep when we are finished.
     ChannelPromise finished = channel().newPromise();
 
-    //Every specified time frame by delay(), we perform the next action in our sequence
+    //Every specified time frame by delay(), we perform the next action in our sequence and inform ProbingStep when finished
     if (!delay().equals(Duration.ZERO)) {
       timer.newTimeout(timeout -> {
             // Write appropriate message to pipeline
-            ChannelFuture channelFuture = actionHandler().apply(outboundMessage());
-            System.out.println("test1");
-            channelFuture.addListeners(
-                future -> actionHandler().resetFuture(),
-                future -> finished.setSuccess());
+            informListeners(finished);
           },
           delay().getStandardSeconds(),
           TimeUnit.SECONDS);
     } else {
-
-      ChannelFuture channelFuture = actionHandler().apply(outboundMessage());
-      channelFuture.addListeners(
-          future -> actionHandler().resetFuture(),
-          future -> finished.setSuccess()
-      );
+      //if no delay, just perform the next action, and inform ProbingStep when finished
+      informListeners(finished);
     }
 
     return finished;
@@ -137,13 +157,12 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
     public abstract B protocol(Protocol value);
 
-    abstract P autoBuild();
+    public abstract B host(String value);
 
-    public P build() {
-      P probingAction = autoBuild();
-      probingAction.protocol().probingAction(probingAction);
-      return probingAction;
-    }
+    public abstract B path(String value);
+
+    public abstract P build();
+
   }
 
   /**
