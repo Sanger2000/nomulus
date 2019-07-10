@@ -24,8 +24,7 @@ import io.netty.channel.ChannelPromise;
 
 /**
  *
- * @param <I> Generic Type of Inbound Message
- * @param <O> Generic Type of Outbound Message
+ *
  * Abstract class that tells sends message down pipeline and
  * and tells listeners to move on when the message is received.
  */
@@ -39,7 +38,10 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   /** Writes and flushes specified outboundMessage to channel pipeline and returns future
    * that is marked as success when ActionHandler next reads from the channel */
   public ChannelFuture getFuture(OutboundMarker outboundMessage) {
+    //Action Handlers subclasses require the outboundMessage for additional logic
     this.outboundMessage = outboundMessage;
+
+    //returns the ChannelPromise initialized
     return finished;
   }
 
@@ -57,7 +59,14 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    logger.atSevere().withCause(cause).log("error");
+    logger.atSevere().withCause(cause).log(String.format(
+        "Attempted Action was unsuccessful with channel: %s, having pipeline: %s",
+        ctx.channel().toString(),
+        ctx.channel().pipeline().toString()));
+
+    finished.setFailure(cause);
+    ChannelFuture closedFuture = ctx.channel().close();
+    closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
   }
 }
 
