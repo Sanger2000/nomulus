@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 
 /**
  *
- * @param <O> Generic type of OutboundMessage
  * Subclass of ProbingAction that takes in an existing channel
  */
 @AutoValue

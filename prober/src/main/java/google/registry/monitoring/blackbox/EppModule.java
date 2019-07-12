@@ -20,6 +20,8 @@ import dagger.Provides;
 
 
 import google.registry.monitoring.blackbox.handlers.EppActionHandler;
+import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
+import google.registry.monitoring.blackbox.handlers.MessageHandler;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
@@ -91,18 +93,20 @@ public class EppModule {
   @EppProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> provideEppHandlerProviders(
       @EppProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
-      Provider<HttpClientCodec> httpClientCodecProvider,
-      Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
-      Provider<WebWhoisMessageHandler> responseDowncastHandlerProvider,
+      @EppProtocol Provider<MessageHandler> messageHandlerProvider,
       Provider<EppActionHandler> webWhoisActionHandlerProvider) {
     return ImmutableList.of(
         sslClientInitializerProvider,
-        httpClientCodecProvider,
-        httpObjectAggregatorProvider,
-        responseDowncastHandlerProvider,
+        messageHandlerProvider,
         webWhoisActionHandlerProvider);
   }
 
+
+  @Provides
+  @EppProtocol
+  static MessageHandler provideMessageHandler() {
+    return new EppMessageHandler();
+  }
 
   @Provides
   @EppProtocol

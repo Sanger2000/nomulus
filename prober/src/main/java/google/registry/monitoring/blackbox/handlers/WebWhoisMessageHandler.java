@@ -9,7 +9,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import javax.inject.Inject;
 
-public class WebWhoisMessageHandler extends ChannelDuplexHandler {
+public class WebWhoisMessageHandler extends MessageHandler {
 
   private HttpRequestMessage request;
 

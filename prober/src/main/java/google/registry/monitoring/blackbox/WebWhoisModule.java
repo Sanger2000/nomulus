@@ -20,7 +20,10 @@ import dagger.Provides;
 import dagger.multibindings.IntoSet;
 
 
+import google.registry.monitoring.blackbox.EppModule.EppProtocol;
 import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
+import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
+import google.registry.monitoring.blackbox.handlers.MessageHandler;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
@@ -114,12 +117,12 @@ public class WebWhoisModule {
   static ImmutableList<Provider<? extends ChannelHandler>> providerHttpWhoisHandlerProviders(
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
-      Provider<WebWhoisMessageHandler> responseDowncastHandlerProvider,
+      @WhoisProtocol Provider<MessageHandler> messageHandlerProvider,
       Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
     return ImmutableList.of(
         httpClientCodecProvider,
         httpObjectAggregatorProvider,
-        responseDowncastHandlerProvider,
+        messageHandlerProvider,
         webWhoisActionHandlerProvider);
   }
 
@@ -129,18 +132,22 @@ public class WebWhoisModule {
       @HttpsWhoisProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
-      Provider<WebWhoisMessageHandler> responseDowncastHandlerProvider,
+      @WhoisProtocol Provider<MessageHandler> messageHandlerProvider,
       Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
     return ImmutableList.of(
         sslClientInitializerProvider,
         httpClientCodecProvider,
         httpObjectAggregatorProvider,
-        responseDowncastHandlerProvider,
+        messageHandlerProvider,
         webWhoisActionHandlerProvider);
   }
 
 
-
+  @Provides
+  @WhoisProtocol
+  static MessageHandler provideMessageHandler() {
+    return new WebWhoisMessageHandler();
+  }
 
   @Provides
   static HttpClientCodec provideHttpClientCodec() {
