@@ -94,6 +94,7 @@ public class ProberModule {
       modules = {
           ProberModule.class,
           WebWhoisModule.class,
+          EppModule.class,
           TokenModule.class
       })
   public interface ProberComponent {

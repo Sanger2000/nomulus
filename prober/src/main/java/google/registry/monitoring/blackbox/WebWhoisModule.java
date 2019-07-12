@@ -20,7 +20,8 @@ import dagger.Provides;
 import dagger.multibindings.IntoSet;
 
 
-import google.registry.monitoring.blackbox.handlers.ResponseDowncastHandler;
+import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
+import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
 import io.netty.channel.ChannelHandler;
@@ -42,11 +43,11 @@ public class WebWhoisModule {
 
   /** Dagger qualifier to provide HTTP whois protocol related handlers and other bindings. */
   @Qualifier
-  @interface HttpWhoisProtocol {}
+  public @interface HttpWhoisProtocol {}
 
   /** Dagger qualifier to provide HTTPS whois protocol related handlers and other bindings. */
   @Qualifier
-  @interface HttpsWhoisProtocol {}
+  public @interface HttpsWhoisProtocol {}
 
   @Qualifier
   @interface WhoisProtocol {}
@@ -113,7 +114,7 @@ public class WebWhoisModule {
   static ImmutableList<Provider<? extends ChannelHandler>> providerHttpWhoisHandlerProviders(
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
-      Provider<ResponseDowncastHandler> responseDowncastHandlerProvider,
+      Provider<WebWhoisMessageHandler> responseDowncastHandlerProvider,
       Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
     return ImmutableList.of(
         httpClientCodecProvider,
@@ -125,10 +126,10 @@ public class WebWhoisModule {
   @Provides
   @HttpsWhoisProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> providerHttpsWhoisHandlerProviders(
-      Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
+      @HttpsWhoisProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
-      Provider<ResponseDowncastHandler> responseDowncastHandlerProvider,
+      Provider<WebWhoisMessageHandler> responseDowncastHandlerProvider,
       Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
     return ImmutableList.of(
         sslClientInitializerProvider,
@@ -155,6 +156,12 @@ public class WebWhoisModule {
   static SslProvider provideSslProvider() {
     // Prefer OpenSSL.
     return OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
+  }
+
+  @Provides
+  @HttpsWhoisProtocol
+  static SslClientInitializer<NioSocketChannel> provideSslClientInitializer(SslProvider sslProvider) {
+    return new SslClientInitializer<>(sslProvider);
   }
 
 

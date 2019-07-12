@@ -27,7 +27,7 @@ public abstract class Token {
   protected String localHostname;
   protected String domainName;
 
-  public abstract Token next(ProbingStep<? extends AbstractChannel> nextAction);
+  public abstract Token next();
   public abstract OutboundMarker modifyMessage(OutboundMarker message);
   public abstract String getHost();
 

@@ -86,7 +86,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
 
 
   private Token generateNextToken(Token token) {
-    return (isLastStep) ? token.next(this.nextStep) : token;
+    return (isLastStep) ? token.next() : token;
   }
 
   @Override

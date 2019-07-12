@@ -15,9 +15,10 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class TokenTest {
 
-  private static String PROTOCOL_NAME = "PROTOCOL NAME";
-  private static String TEST_STARTER = "TEST_STARTER";
-  private static String TEST_DOMAIN = "TEST_DOMAIN";
+
+  private static String PREFIX = "whois.nic.";
+  private static String TEST_STARTER = "starter";
+  private static String TEST_DOMAIN = "test";
 
   public Token webToken = new WebWhoisToken(TEST_DOMAIN);
 
@@ -28,7 +29,7 @@ public class TokenTest {
 
     HttpRequestMessage secondMessage = (HttpRequestMessage) webToken.modifyMessage(message);
 
-    assertThat(secondMessage.headers().get("host")).isEqualTo(TEST_DOMAIN);
+    assertThat(secondMessage.headers().get("host")).isEqualTo(PREFIX+TEST_DOMAIN);
 
   }
 

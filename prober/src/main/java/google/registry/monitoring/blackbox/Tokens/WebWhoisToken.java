@@ -24,16 +24,17 @@ import io.netty.channel.Channel;
 import javax.inject.Inject;
 
 public class WebWhoisToken extends Token {
+  private static final String prefix = "whois.nic.";
   private static final String name = "app";
   private String host;
 
   @Inject
   public WebWhoisToken(@WebWhoIs String domainName) {
-    host = domainName;
+    host = prefix + domainName;
   }
 
   @Override
-  public Token next(ProbingStep<? extends AbstractChannel> nextAction) {
+  public Token next() {
     return new WebWhoisToken(name);
   }
 

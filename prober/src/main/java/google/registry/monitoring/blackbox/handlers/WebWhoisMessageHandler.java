@@ -9,12 +9,12 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import javax.inject.Inject;
 
-public class ResponseDowncastHandler extends ChannelDuplexHandler {
+public class WebWhoisMessageHandler extends ChannelDuplexHandler {
 
   private HttpRequestMessage request;
 
   @Inject
-  public ResponseDowncastHandler() {}
+  public WebWhoisMessageHandler() {}
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

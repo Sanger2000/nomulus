@@ -25,8 +25,7 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.monitoring.blackbox.WebWhoisModule.HttpWhoisProtocol;
-import google.registry.monitoring.blackbox.WebWhoisModule.HttpsWhoisProtocol;
-import google.registry.monitoring.blackbox.handlers.ResponseDowncastHandler;
+import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 
 import io.netty.channel.Channel;
@@ -35,7 +34,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -73,7 +71,7 @@ public abstract class ProberModuleTest {
       ImmutableSet.of(
           // The PROXY protocol is only used when the proxy is behind the GCP load balancer. It is
           // not part of any business logic.
-          ResponseDowncastHandler.class,
+          WebWhoisMessageHandler.class,
           // SSL is part of the business logic for some protocol (EPP for example), but its
           // impact is isolated. Including it makes tests much more complicated. It should be tested
           // separately in its own unit tests.
