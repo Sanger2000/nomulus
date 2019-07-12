@@ -1,25 +1,36 @@
 package google.registry.monitoring.blackbox.messages;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
 
-public abstract class EppRequestMessage extends HttpRequestMessage {
+public abstract class EppRequestMessage implements OutboundMarker {
+  private static int HEADER_LENGTH = 4;
+  private static String PLACE_HOLDER = "PLACE_HOLDER_STRING";
+  protected String template;
+  protected String message;
 
   public abstract EppRequestMessage modifyMessage(String newDomain);
 
-  private EppRequestMessage(String content, String host, String path) {
-    super(HttpVersion.HTTP_1_1, HttpMethod.POST, path, Unpooled.wrappedBuffer(content.getBytes(US_ASCII)));
-    headers().setInt("content-length", content().readableBytes());
+  private EppRequestMessage(String template) {
+    this.template = template;
   }
 
+  public ByteBuf bytes() {
+    byte[] bytestream = message.getBytes(US_ASCII);
+    int capacity = HEADER_LENGTH + bytestream.length;
+
+    ByteBuf buf = Unpooled.buffer(capacity);
+
+    buf.writeInt(capacity);
+    buf.writeBytes(bytestream);
+
+    return buf;
+  }
   public static class HELLO extends EppRequestMessage {
     public HELLO(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -30,7 +41,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
 
   public static class LOGIN extends EppRequestMessage {
     public LOGIN(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -41,7 +52,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
 
   public static class CHECK extends EppRequestMessage {
     public CHECK(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -52,7 +63,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
 
   public static class CLAIMSCHECK extends EppRequestMessage {
     public CLAIMSCHECK(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -63,7 +74,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
 
   public static class CREATE extends EppRequestMessage {
     public CREATE(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -73,7 +84,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
   }
   public static class DELETE extends EppRequestMessage {
     public DELETE(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override
@@ -83,7 +94,7 @@ public abstract class EppRequestMessage extends HttpRequestMessage {
   }
   public static class LOGOUT extends EppRequestMessage {
     public LOGOUT(String content, String host, String path) {
-      super(content, host, path);
+      super(content);
     }
 
     @Override

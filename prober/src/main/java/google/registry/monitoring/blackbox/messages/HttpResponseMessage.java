@@ -1,5 +1,7 @@
 package google.registry.monitoring.blackbox.messages;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -15,6 +17,7 @@ public class HttpResponseMessage extends DefaultFullHttpResponse implements Inbo
   public HttpResponseMessage(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
     super(version, status, content);
   }
+
 
   public static HttpResponseMessage fromResponse(FullHttpResponse response) {
     HttpResponseMessage finalResponse;
