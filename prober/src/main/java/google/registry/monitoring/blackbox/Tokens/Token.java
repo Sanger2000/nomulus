@@ -21,8 +21,7 @@ import java.io.IOException;
 
 public abstract class Token {
 
-  private static final int MAX_DOMAIN_PART_LENGTH = 50;
-  private static int clientIdSuffix = 0;
+
   protected String localHostname;
   protected String domainName;
   protected Channel channel;
@@ -40,34 +39,7 @@ public abstract class Token {
   }
 
 
-  /**
-   * Return a unique string usable as an EPP client transaction ID.
-   *
-   * <p><b>Warning:</b> The prober cleanup servlet relies on the timestamp being in the third
-   * position when splitting on dashes. Do not change this format without updating that code as
-   * well.
-   */
-  protected synchronized String getNewTRID() {
-    return String.format("prober-%s-%d-%d",
-        localHostname,
-        System.currentTimeMillis(),
-        clientIdSuffix++);
-  }
 
-  /**
-   * Return a fully qualified domain label to use, derived from the client transaction ID.
-   */
-  protected static synchronized String newDomainName(String clTRID) {
-    String sld;
-    // not sure if the local hostname will stick to RFC validity rules
-    if (clTRID.length() > MAX_DOMAIN_PART_LENGTH) {
-      sld = clTRID.substring(clTRID.length() - MAX_DOMAIN_PART_LENGTH);
-    } else {
-      sld = clTRID;
-    }
-    //insert top level domain here
-    return String.format("%s.%s", sld, "app");
-  }
 
 
 }

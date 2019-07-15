@@ -17,21 +17,24 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
 
 
   protected Document message;
-  protected ImmutableMap.Builder<String, String> replacements;
+  protected ImmutableMap<String, String> replacements;
   private String template;
 
 
-  public EppRequestMessage modifyMessage(String newDomain) throws IOException, EppClientException {
-    Map<String, String> nextArguments = replacements
+  public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException {
+    Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
+        .putAll(replacements)
         .put(DOMAIN_KEY, newDomain)
+        .put(CLIENT_TRID_KEY, clTRID)
         .build();
     message = getEppDocFromTemplate(template, nextArguments);
     return this;
   }
 
 
-  private EppRequestMessage(String template, ImmutableMap.Builder<String, String> replacements) {
+  private EppRequestMessage(String template, ImmutableMap<String, String> replacements) {
     this.template = template;
+    this.replacements = replacements;
   }
 
   public ByteBuf bytes() throws EppClientException{
@@ -48,17 +51,16 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
 
   public static class HELLO extends EppRequestMessage {
     private static final String template = "hello.xml";
-    public HELLO(String clTRID) {
+    public HELLO() {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-            .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String newDomain) throws IOException, EppClientException{
-      message = getEppDocFromTemplate(template, replacements.build());
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
+      message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
       return this;
     }
   }
@@ -66,19 +68,23 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
   public static class LOGIN extends EppRequestMessage {
     private static final String template = "login.xml";
 
-    public LOGIN(String eppClientId, String eppClientPassword, String clTRID) {
+    public LOGIN(String eppClientId, String eppClientPassword) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-              .put(CLIENT_ID_KEY, eppClientId)
-              .put(CLIENT_PASSWORD_KEY, eppClientPassword)
-              .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of(
+              CLIENT_ID_KEY, eppClientId,
+              CLIENT_PASSWORD_KEY, eppClientPassword
+          )
       );
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String newDomain) throws IOException, EppClientException{
-      message = getEppDocFromTemplate(template, replacements.build());
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
+      Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
+          .putAll(replacements)
+          .put(CLIENT_TRID_KEY, clTRID)
+          .build();
+      message = getEppDocFromTemplate(template, nextArguments);
       return this;
     }
   }
@@ -89,8 +95,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     public CHECK(String clTRID) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-          .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
   }
@@ -101,8 +106,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     public CLAIMSCHECK(String clTRID) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-              .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
   }
@@ -113,8 +117,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     public CREATE(String clTRID) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-              .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
   }
@@ -124,8 +127,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     public DELETE(String clTRID) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-              .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
   }
@@ -136,14 +138,13 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     public LOGOUT(String clTRID) {
       super(
           template,
-          ImmutableMap.<String, String>builder()
-              .put(CLIENT_TRID_KEY, clTRID)
+          ImmutableMap.of()
       );
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String newDomain) throws IOException, EppClientException{
-      message = getEppDocFromTemplate(template, replacements.build());
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
+      message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
       return this;
     }
   }
