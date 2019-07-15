@@ -24,16 +24,26 @@ import google.registry.monitoring.blackbox.Protocol;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.net.MalformedURLException;
 import java.net.URL;
 import javax.inject.Inject;
 import org.joda.time.Duration;
 
+/**
+ *Subclass of {@link ActionHandler} that deals with the WebWhois Sequence
+ *
+ * <p> Main purpose is to verify {@link HttpResponseMessage} received is valid. If the response implies a redirection
+ * it follows the redirection until either an Error Response is received, or {@link HttpResponseStatus.OK} is received</p>
+ */
 public class WebWhoisActionHandler extends ActionHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -41,15 +51,15 @@ public class WebWhoisActionHandler extends ActionHandler {
   @Inject
   public WebWhoisActionHandler() {}
 
-  /** Method needed for workaround in order to create ProbingAction builder with Channel type specified by the current channel type */
-  private <C extends AbstractChannel> NewChannelAction.Builder<C> createBuilder(
-      Class<? extends Channel> className, ProbingAction currentAction) {
-    return ((NewChannelAction<C>) currentAction).toBuilder();
-  }
 
-
+  /**
+   * After receiving {@link HttpResponseMessage}, either notes success and marks future as finished, notes an error
+   * in the received {@link URL} and throws a {@link ServerSideException}, received a response indicating a Failure,
+   * or receives a redirection response, where it follows the redirections until receiving one of the previous three responses
+   */
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType msg) throws Exception {
+  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType msg)
+      throws ServerSideException {
 
     HttpResponseMessage response = (HttpResponseMessage) msg;
 
@@ -59,13 +69,18 @@ public class WebWhoisActionHandler extends ActionHandler {
 
       finished.setSuccess();
 
-      System.out.println(response);
+      logger.atInfo().log("Response Received: " + response);
 
     } else if (response.status() == HttpResponseStatus.FOUND || response.status() == HttpResponseStatus.MOVED_PERMANENTLY) {
 
       //Obtain url to be redirected to
-      URL url = new URL(response.headers().get("Location"));
-
+      URL url;
+      try {
+        url = new URL(response.headers().get("Location"));
+      } catch (MalformedURLException e) {
+        //in case of error, log it, and let ActionHandler's exceptionThrown method deal with it
+        throw new ServerSideException("Redirected Location was invalid. Given Location was: " + response.headers().get("Location"));
+      }
       //From url, extract new host, port, and path
       String newHost = url.getHost();
       String newPath = url.getPath();
@@ -76,14 +91,15 @@ public class WebWhoisActionHandler extends ActionHandler {
       //Construct new Protocol to reflect redirected host, path, and port
       Protocol newProtocol = Prober.portToProtocolMap.get(newPort);
 
+      //Obtain old ProbingAction, which we will use as a template for the new one
       ProbingAction oldAction = ctx.channel().attr(PROBING_ACTION_KEY).get();
 
-      //Modify HttpRequest sent to remote host to reflect new path and host
+      //Modify HttpRequestMessage sent to remote host to reflect new path and host
       HttpRequestMessage httpRequest = ((HttpRequestMessage)oldAction.outboundMessage()).setUri(newPath);
       httpRequest.headers().set(HttpHeaderNames.HOST, newHost);
 
-      //Create new probingAction that takes in the new Protocol and HttpRequest message
-      ProbingAction redirectedAction = createBuilder(ctx.channel().getClass(), oldAction)
+      //Create new probingAction that takes in the new Protocol and HttpRequestMessage with no delay
+      ProbingAction redirectedAction = oldAction.toBuilder()
           .protocol(newProtocol)
           .outboundMessage(httpRequest)
           .delay(Duration.ZERO)
@@ -109,7 +125,8 @@ public class WebWhoisActionHandler extends ActionHandler {
           }
       );
     } else {
-      finished.setFailure(new RuntimeException());
+      //Add in metrics Handling that informs MetricsCollector the response was a FAILURE
+      finished.setSuccess();
       logger.atWarning().log(String.format("Received unexpected response: %s", response.status()));
 
     }

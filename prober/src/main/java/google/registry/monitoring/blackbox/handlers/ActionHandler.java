@@ -66,7 +66,16 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().toString(),
         ctx.channel().pipeline().toString()));
 
-    finished.setFailure(cause);
+
+    if (ServerSideException.class.isInstance(cause)) {
+      //TODO - add in metrics handling to inform MetricsCollector the status of the task was an ERROR
+      logger.atInfo().log(cause.getMessage());
+      finished.setSuccess();
+    } else {
+      finished.setFailure(cause);
+    }
+
+    //due to failure, close channel
     ChannelFuture closedFuture = ctx.channel().close();
     closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
   }

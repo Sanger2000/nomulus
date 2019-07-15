@@ -111,7 +111,6 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
       return;
     }
 
-    System.out.println(nextStep.protocol());
     if (nextStep.protocol().persistentConnection()) {
       token.channel(nextAction.channel());
     } else {

@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.local.LocalAddress;
 
 /**
+ *Subclass of {@link ProbingAction} that creates a new {@link Channel} based on its parameters
  *
  * @param <C> For testing Purposes to use different kinds of channels (other than NioSocketChannel)
  * Subclass of ProbingAction where each instance creates a new channel
@@ -38,21 +39,16 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
   /** Default {@link LocalAddress} when not initialized in {@code Builder} */
   private final static LocalAddress DEFAULT_ADDRESS = new LocalAddress("TEST_ADDRESS");
 
-  /** Local Address for connection. ONLY FOR TESTING*/
+  /** {@link LocalAddress} for connection. ONLY FOR TESTING*/
   public abstract LocalAddress address();
 
-  /**{@link Channel} created from bootstrap connection to protocol's specified host and port*/
+  /** {@link Channel} created from bootstrap connection to protocol's specified host and port*/
   private Channel channel;
 
-  /**
-   *
-   * @return {@link Bootstrap} object associated with this {@link ProbingAction}
-   */
+  /** {@link Bootstrap} object associated with this {@link ProbingAction} */
   abstract Bootstrap bootstrap();
 
-  /**
-   * @return {@link Channel} Object instantiated in call
-   */
+  /** {@link Channel} object instantiated in {@code call()} */
   @Override
   public Channel channel() {
     return this.channel;
@@ -63,7 +59,8 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
   public abstract Builder<C> toBuilder();
 
   /**
-   * Creates channel from bootstrap and protocol given to instance
+   * Creates channel from {@link Bootstrap} and {@link Bootstrap} given to instance
+   *
    * @return ChannelFuture instance that is set to success when previous action has
    * finished and requisite time as passed
    */

@@ -20,11 +20,8 @@ import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_K
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 
-import google.registry.monitoring.blackbox.EppModule.EppProtocol;
 import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
-import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
-import google.registry.monitoring.blackbox.WebWhoisModule.HttpsWhoisProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
@@ -35,13 +32,15 @@ import io.netty.handler.ssl.SslProvider;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.function.Supplier;
-import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
 /**
  * Adds a client side SSL handler to the channel pipeline.
+ *
+ * <p> Code is close to unchanged from {@link SslClientInitializer}</p> in proxy, but is modified
+ * for revised overall structure of connections, and to accomdate EPP connections </p>
  *
  * <p>This <b>must</b> be the first handler provided for any handler provider list, if it is
  * provided. The type parameter {@code C} is needed so that unit tests can construct this handler
@@ -59,7 +58,7 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
   private final Supplier<X509Certificate[]> certificateSupplier;
 
 
-  public SslClientInitializer(@HttpsWhoisProtocol SslProvider sslProvider) {
+  public SslClientInitializer(SslProvider sslProvider) {
     // null uses the system default trust store.
     //Used for WebWhois, so we don't care about privateKey and certificates, setting them to null
     this(sslProvider, null, null, null);
@@ -93,6 +92,7 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
     ProbingAction action = channel.attr(PROBING_ACTION_KEY).get();
     Protocol protocol = action.protocol();
 
+    //Builds SslHandler from Protocol, and based on if we require a privateKey and certificate
     checkNotNull(protocol, "Protocol is not set for channel: %s", channel);
     SslContextBuilder sslContextBuilder =
         SslContextBuilder.forClient()

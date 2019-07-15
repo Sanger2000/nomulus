@@ -158,7 +158,6 @@ public class ProbingSequenceStepTest {
 
     //Call accept on the first step, which should send our message to the server, which will then be
     //echoed back to us, causing us to move to the next step
-    System.out.println("test1");
     firstStep.accept(testToken);
 
 
