@@ -14,7 +14,6 @@
 
 package google.registry.monitoring.blackbox;
 
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
