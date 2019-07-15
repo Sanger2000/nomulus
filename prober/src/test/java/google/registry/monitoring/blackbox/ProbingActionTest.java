@@ -83,7 +83,6 @@ public class ProbingActionTest {
         .name(PROTOCOL_NAME)
         .port(TEST_PORT)
         .persistentConnection(false)
-        .address(address)
         .build();
   }
   private void setupExistingChannelProtocol() {
@@ -92,7 +91,6 @@ public class ProbingActionTest {
         .name(PROTOCOL_NAME)
         .port(TEST_PORT)
         .persistentConnection(true)
-        .address(address)
         .build();
   }
 
@@ -103,6 +101,7 @@ public class ProbingActionTest {
         .delay(Duration.ZERO)
         .outboundMessage(new DuplexMessageTest(TEST_MESSAGE))
         .host("")
+        .address(address)
         .build();
   }
 

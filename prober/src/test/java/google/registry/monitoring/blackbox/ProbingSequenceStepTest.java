@@ -90,7 +90,7 @@ public class ProbingSequenceStepTest {
   /** Sets up our main step (firstStep) and throwaway step (dummyStep) */
   private void setupSteps() {
     firstStep = new TestStep(testProtocol, TEST_MESSAGE);
-    dummyStep = new DummyStep(eventLoopGroup);
+    dummyStep = new DummyStep(testProtocol, eventLoopGroup);
   }
 
   /** Sets up testProtocol for when we create a new channel */
@@ -100,7 +100,6 @@ public class ProbingSequenceStepTest {
         .name(PROTOCOL_NAME)
         .port(PROTOCOL_PORT)
         .persistentConnection(false)
-        .address(address)
         .build();
   }
 

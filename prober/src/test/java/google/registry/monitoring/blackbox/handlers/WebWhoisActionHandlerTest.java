@@ -16,7 +16,6 @@ package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 import static google.registry.monitoring.blackbox.TestUtils.makeHttpResponse;
 import static google.registry.monitoring.blackbox.TestUtils.makeHttpGetRequest;
 
@@ -127,7 +126,7 @@ public class WebWhoisActionHandlerTest {
     setupChannel(initialProtocol, msg);
 
     //stores future
-    ChannelFuture future = actionHandler.getFuture(msg);
+    ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(msg);
 
 
@@ -158,7 +157,7 @@ public class WebWhoisActionHandlerTest {
 
 
     //stores future
-    ChannelFuture future = actionHandler.getFuture(msg);
+    ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(msg);
 
     //setup for checker to ensure future listener isn't triggered to early
@@ -188,7 +187,7 @@ public class WebWhoisActionHandlerTest {
     setupChannel(initialProtocol, outboundMessage);
 
     //stores future
-    ChannelFuture future = actionHandler.getFuture(outboundMessage);
+    ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(outboundMessage);
 
     FullHttpResponse response = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.MOVED_PERMANENTLY, HTTP_REDIRECT + REDIRECT_HOST, true, false));
@@ -211,7 +210,7 @@ public class WebWhoisActionHandlerTest {
 
     HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest(TARGET_HOST, ""));
     //store future
-    ChannelFuture future = actionHandler.getFuture(msg);
+    ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(msg);
 
 

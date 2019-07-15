@@ -179,9 +179,10 @@ public class TestUtils {
   public static class DummyStep extends ProbingStep<LocalChannel> {
     private DefaultPromise<Token> future;
 
-    public DummyStep(EventLoopGroup eventLoopGroup) {
+    public DummyStep(Protocol protocol, EventLoopGroup eventLoopGroup) {
       future = new DefaultPromise<Token>(eventLoopGroup.next()) {};
       duration = Duration.ZERO;
+      this.protocol = protocol;
     }
     @Override
     protected DuplexMessageTest message() {

@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.local.LocalAddress;
 
 /**
  *
@@ -33,6 +34,12 @@ import io.netty.channel.ChannelPromise;
 public abstract class NewChannelAction<C extends AbstractChannel> extends ProbingAction {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Default {@link LocalAddress} when not initialized in {@code Builder} */
+  private final static LocalAddress DEFAULT_ADDRESS = new LocalAddress("TEST_ADDRESS");
+
+  /** Local Address for connection. ONLY FOR TESTING*/
+  public abstract LocalAddress address();
 
   /**{@link Channel} created from bootstrap connection to protocol's specified host and port*/
   private Channel channel;
@@ -85,7 +92,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
     if (!host().equals("")) {
       connectionFuture = bootstrap.connect(host(), protocol().port());
     } else {
-      connectionFuture = bootstrap.connect(protocol().address());
+      connectionFuture = bootstrap.connect(address());
     }
 
     //ChannelPromise that we return
@@ -115,7 +122,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
   }
 
   public static <C extends AbstractChannel> NewChannelAction.Builder<C> builder() {
-    return new AutoValue_NewChannelAction.Builder<C>().path("");
+    return new AutoValue_NewChannelAction.Builder<C>().path("").address(DEFAULT_ADDRESS);
   }
 
 
@@ -123,6 +130,8 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
   public static abstract class Builder<C extends AbstractChannel> extends ProbingAction.Builder<Builder<C>, NewChannelAction<C>> {
     //specifies bootstrap in this builder
     public abstract NewChannelAction.Builder<C> bootstrap(Bootstrap value);
+
+    public abstract NewChannelAction.Builder<C> address(LocalAddress value);
 
   }
 

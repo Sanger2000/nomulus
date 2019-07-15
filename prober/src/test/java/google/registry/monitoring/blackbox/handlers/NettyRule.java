@@ -18,7 +18,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 
 import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 import static google.registry.testing.JUnitBackports.assertThrows;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -26,7 +25,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.base.Throwables;
 import com.google.common.truth.ThrowableSubject;
 import google.registry.monitoring.blackbox.ProbingAction;
-import google.registry.monitoring.blackbox.Protocol;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
