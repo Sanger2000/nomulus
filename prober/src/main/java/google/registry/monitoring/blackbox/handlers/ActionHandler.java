@@ -15,31 +15,26 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.flogger.FluentLogger;
-import google.registry.monitoring.blackbox.messages.InboundMarker;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
+import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
- *
- *
  * Abstract class that tells sends message down pipeline and
  * and tells listeners to move on when the message is received.
  */
-public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundMarker> {
+public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundMessageType> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   protected ChannelPromise finished;
-  protected OutboundMarker outboundMessage;
 
   /** Writes and flushes specified outboundMessage to channel pipeline and returns future
    * that is marked as success when ActionHandler next reads from the channel */
-  public ChannelFuture getFuture(OutboundMarker outboundMessage) {
+  public ChannelFuture getFuture() {
     //Action Handlers subclasses require the outboundMessage for additional logic
-    this.outboundMessage = outboundMessage;
 
     //returns the ChannelPromise initialized
     return finished;
@@ -52,7 +47,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   }
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, InboundMarker inboundMessage) throws Exception {
+  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws Exception {
     //simply marks finished as success
     finished.setSuccess();
   }

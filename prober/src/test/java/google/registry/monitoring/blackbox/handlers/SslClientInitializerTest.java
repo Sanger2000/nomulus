@@ -16,7 +16,6 @@ package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.getKeyPair;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.setUpSslChannel;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.signKeyPair;
@@ -26,8 +25,7 @@ import google.registry.monitoring.blackbox.ExistingChannelAction;
 import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
 import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
-import google.registry.monitoring.blackbox.TestUtils.ExistingChannelToken;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
@@ -69,7 +67,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class SslClientInitializerTest {
 
-  private static final OutboundMarker DEFAULT_MESSAGE = new DuplexMessageTest("TEST_MESSAGE");
+  private static final OutboundMessageType DEFAULT_MESSAGE = new DuplexMessageTest("TEST_MESSAGE");
 
   /** Fake host to test if the SSL engine gets the correct peer host. */
   private static final String SSL_HOST = "www.example.tld";

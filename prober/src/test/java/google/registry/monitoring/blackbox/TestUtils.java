@@ -18,11 +18,10 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.messages.InboundMarker;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
+import google.registry.monitoring.blackbox.messages.InboundMessageType;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalChannel;
@@ -141,7 +140,7 @@ public class TestUtils {
     }
   }
 
-  public static class DuplexMessageTest implements OutboundMarker, InboundMarker {
+  public static class DuplexMessageTest implements OutboundMessageType, InboundMessageType {
 
     String message;
 
@@ -206,12 +205,12 @@ public class TestUtils {
       this.host = host;
     }
     @Override
-    public Token next(ProbingStep<? extends AbstractChannel> nextAction) {
+    public Token next() {
       return this;
     }
 
     @Override
-    public OutboundMarker modifyMessage(OutboundMarker message) {
+    public OutboundMessageType modifyMessage(OutboundMessageType message) {
       return message;
     }
 

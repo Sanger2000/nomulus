@@ -16,11 +16,13 @@ package google.registry.monitoring.blackbox;
 
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
+import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
+import java.io.IOException;
 import java.util.function.Consumer;
 import org.joda.time.Duration;
 
@@ -39,7 +41,11 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
   protected Protocol protocol;
   protected Duration duration;
 
-  protected abstract OutboundMarker message();
+  protected abstract OutboundMessageType message();
+
+  public Protocol protocol() {
+    return protocol;
+  }
 
   void lastStep() {
     isLastStep = true;
@@ -58,12 +64,12 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     return this;
   }
 
-  private ProbingAction generateAction(Token token) {
+  private ProbingAction generateAction(Token token) throws IOException, EppClientException {
     ProbingAction generatedAction;
 
-    OutboundMarker message = token.modifyMessage(message());
+    OutboundMessageType message = token.modifyMessage(message());
 
-    if (protocol.persistentConnection()) {
+    if (token.channel() != null) {
       generatedAction = ExistingChannelAction.builder()
           .delay(duration)
           .protocol(protocol)
@@ -91,8 +97,27 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
 
   @Override
   public void accept(Token token) {
-    ChannelFuture future;
-    future = generateAction(token).call();
+    ProbingAction nextAction;
+    try {
+      nextAction = generateAction(token);
+    } catch(EppClientException e) {
+      logger.atWarning().withCause(e).log("Error in Action Generation");
+      nextStep.accept(generateNextToken(token));
+      return;
+
+    } catch(IOException e) {
+      logger.atWarning().withCause(e).log("Error in Action Generation");
+      nextStep.accept(generateNextToken(token));
+      return;
+    }
+
+    if (nextStep.protocol().persistentConnection()) {
+      token.channel(nextAction.channel());
+    } else {
+      token.channel(null);
+    }
+
+    ChannelFuture future = nextAction.call();
 
     future.addListener(f -> {
       if (f.isSuccess()) {

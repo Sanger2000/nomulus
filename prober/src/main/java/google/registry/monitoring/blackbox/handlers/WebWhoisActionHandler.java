@@ -15,9 +15,7 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
-import static google.registry.monitoring.blackbox.Protocol.PROTOCOL_KEY;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.NewChannelAction;
 import google.registry.monitoring.blackbox.ProbingAction;
@@ -25,7 +23,7 @@ import google.registry.monitoring.blackbox.Prober;
 import google.registry.monitoring.blackbox.Protocol;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
-import google.registry.monitoring.blackbox.messages.InboundMarker;
+import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -51,21 +49,13 @@ public class WebWhoisActionHandler extends ActionHandler {
 
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, InboundMarker msg) throws Exception {
+  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType msg) throws Exception {
 
     HttpResponseMessage response = (HttpResponseMessage) msg;
 
 
     if (response.status() == HttpResponseStatus.OK) {
       logger.atInfo().log("Received Successful HttpResponseStatus");
-
-      HttpRequestMessage request = (HttpRequestMessage) outboundMessage;
-
-      //warns that we have not discarded the outbound message, and proceeds to discard it
-      if (request.refCnt() != 0) {
-        logger.atWarning().log("outboundMessage is still being stored in memory");
-        request.release(request.refCnt());
-      }
 
       finished.setSuccess();
 

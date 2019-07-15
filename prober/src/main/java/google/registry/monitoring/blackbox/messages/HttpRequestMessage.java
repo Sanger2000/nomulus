@@ -1,15 +1,12 @@
 package google.registry.monitoring.blackbox.messages;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 
-public class HttpRequestMessage extends DefaultFullHttpRequest implements OutboundMarker {
+public class HttpRequestMessage extends DefaultFullHttpRequest implements OutboundMessageType {
 
   public HttpRequestMessage(HttpVersion httpVersion, HttpMethod method, String uri) {
     super(httpVersion, method, uri);

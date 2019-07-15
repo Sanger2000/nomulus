@@ -1,14 +1,12 @@
 package google.registry.monitoring.blackbox.messages;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-public class HttpResponseMessage extends DefaultFullHttpResponse implements InboundMarker {
+public class HttpResponseMessage extends DefaultFullHttpResponse implements InboundMessageType {
 
   public HttpResponseMessage(HttpVersion version, HttpResponseStatus status) {
     super(version, status);

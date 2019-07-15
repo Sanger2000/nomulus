@@ -14,11 +14,10 @@
 
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.ProbingStep;
-import google.registry.monitoring.blackbox.Protocol;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
-import io.netty.channel.AbstractChannel;
+import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
+import java.io.IOException;
 
 public abstract class Token {
 
@@ -26,12 +25,19 @@ public abstract class Token {
   private static int clientIdSuffix = 0;
   protected String localHostname;
   protected String domainName;
+  protected Channel channel;
 
   public abstract Token next();
-  public abstract OutboundMarker modifyMessage(OutboundMarker message);
+  public abstract OutboundMessageType modifyMessage(OutboundMessageType message)
+      throws IOException, EppClientException;
   public abstract String getHost();
 
-  public abstract Channel channel();
+  public void channel(Channel channel) {
+    this.channel = channel;
+  }
+  public Channel channel() {
+    return this.channel;
+  }
 
 
   /**

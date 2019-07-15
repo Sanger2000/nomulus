@@ -19,7 +19,7 @@ import static com.google.common.flogger.StackSize.SMALL;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.util.AttributeKey;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.Duration;
@@ -67,7 +67,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
   public abstract Duration delay();
 
   /** message to send to server */
-  public abstract OutboundMarker outboundMessage();
+  public abstract OutboundMessageType outboundMessage();
 
   /**
    * @return {@link Channel} object that represents connection between prober client and server
@@ -92,7 +92,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
   /** Performs the action specified by the ProbingAction and sets the ChannelPromise specified to a success */
   private void informListeners(ChannelPromise finished) {
-    ChannelFuture channelFuture = actionHandler().getFuture(outboundMessage());
+    ChannelFuture channelFuture = actionHandler().getFuture();
     channel().writeAndFlush(outboundMessage());
     channelFuture.addListeners(
         future -> finished.setSuccess(),
@@ -153,7 +153,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
     public abstract B delay(Duration value);
 
-    public abstract B outboundMessage(OutboundMarker value);
+    public abstract B outboundMessage(OutboundMessageType value);
 
     public abstract B protocol(Protocol value);
 

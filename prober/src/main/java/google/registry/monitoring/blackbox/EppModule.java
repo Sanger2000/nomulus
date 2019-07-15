@@ -50,9 +50,7 @@ public class EppModule {
    * Dagger qualifier to provide EPP protocol related handlers and other bindings.
    */
   @Qualifier
-  public @interface EppProtocol {
-
-  }
+  public @interface EppProtocol {}
 
 
   private static final String HTTP_PROTOCOL_NAME = "whois_http";
@@ -94,11 +92,11 @@ public class EppModule {
   static ImmutableList<Provider<? extends ChannelHandler>> provideEppHandlerProviders(
       @EppProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
       @EppProtocol Provider<MessageHandler> messageHandlerProvider,
-      Provider<EppActionHandler> webWhoisActionHandlerProvider) {
+      Provider<EppActionHandler> eppActionHandlerProvider) {
     return ImmutableList.of(
         sslClientInitializerProvider,
         messageHandlerProvider,
-        webWhoisActionHandlerProvider);
+        eppActionHandlerProvider);
   }
 
 

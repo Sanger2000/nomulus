@@ -14,13 +14,9 @@
 
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.ProbingStep;
-import google.registry.monitoring.blackbox.Protocol;
 import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import javax.inject.Inject;
 
 public class WebWhoisToken extends Token {
@@ -39,7 +35,7 @@ public class WebWhoisToken extends Token {
   }
 
   @Override
-  public OutboundMarker modifyMessage(OutboundMarker original) {
+  public OutboundMessageType modifyMessage(OutboundMessageType original) {
     HttpRequestMessage request = (HttpRequestMessage) original;
     request.headers().set("host", host);
 
@@ -51,8 +47,6 @@ public class WebWhoisToken extends Token {
     return host;
   }
 
-  @Override
-  public Channel channel() { return null; }
 
 }
 

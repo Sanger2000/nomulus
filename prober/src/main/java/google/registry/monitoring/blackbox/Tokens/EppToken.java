@@ -1,13 +1,13 @@
 package google.registry.monitoring.blackbox.Tokens;
 
+import google.registry.monitoring.blackbox.messages.EppClientException;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
-import google.registry.monitoring.blackbox.messages.OutboundMarker;
-import io.netty.channel.Channel;
+import google.registry.monitoring.blackbox.messages.OutboundMessageType;
+import java.io.IOException;
 import javax.inject.Inject;
 
 public class EppToken extends Token {
 
-  private Channel channel;
   private String host;
   private String currentDomainName;
 
@@ -15,12 +15,8 @@ public class EppToken extends Token {
   public EppToken() {}
 
   @Override
-  public Channel channel() {
-    return channel;
-  }
-
-  @Override
-  public OutboundMarker modifyMessage(OutboundMarker originalMessage) {
+  public OutboundMessageType modifyMessage(OutboundMessageType originalMessage)
+      throws IOException, EppClientException {
     return ((EppRequestMessage) originalMessage).modifyMessage(currentDomainName);
   }
 

@@ -1,5 +1,5 @@
 package google.registry.monitoring.blackbox.messages;
 
-public interface InboundMarker {
+public interface OutboundMessageType {
 
 }

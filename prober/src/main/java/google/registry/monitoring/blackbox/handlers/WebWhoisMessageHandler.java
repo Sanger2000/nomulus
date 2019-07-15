@@ -2,8 +2,7 @@ package google.registry.monitoring.blackbox.handlers;
 
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
-import google.registry.monitoring.blackbox.messages.InboundMarker;
-import io.netty.channel.ChannelDuplexHandler;
+import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -28,7 +27,7 @@ public class WebWhoisMessageHandler extends MessageHandler {
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
     FullHttpResponse originalResponse = (FullHttpResponse) msg;
-    InboundMarker response = HttpResponseMessage.fromResponse(originalResponse);
+    InboundMessageType response = HttpResponseMessage.fromResponse(originalResponse);
     super.channelRead(ctx, response);
   }
 }
