@@ -89,7 +89,7 @@ public class ProbingSequenceStepTest {
 
   /** Sets up our main step (firstStep) and throwaway step (dummyStep) */
   private void setupSteps() {
-    firstStep = new TestStep(testProtocol, TEST_MESSAGE);
+    firstStep = new TestStep(testProtocol, TEST_MESSAGE, address);
     dummyStep = new DummyStep(testProtocol, eventLoopGroup);
   }
 
@@ -148,7 +148,6 @@ public class ProbingSequenceStepTest {
     setupSequence();
     setupNewChannelToken();
 
-
     //checks that the ProbingSteps are appropriately pointing to each other
     assertThat(firstStep.nextStep()).isEqualTo(dummyStep);
     assertThat(dummyStep.nextStep()).isEqualTo(firstStep);
@@ -159,7 +158,6 @@ public class ProbingSequenceStepTest {
     //Call accept on the first step, which should send our message to the server, which will then be
     //echoed back to us, causing us to move to the next step
     firstStep.accept(testToken);
-
 
     //Obtains future for when we have moved to the next step
     DefaultPromise<Token> future = ((DummyStep)dummyStep).getFuture();

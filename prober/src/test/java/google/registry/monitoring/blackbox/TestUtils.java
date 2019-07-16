@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -74,6 +75,23 @@ public class TestUtils {
   public static FullHttpResponse makeHttpResponse(HttpResponseStatus status) {
     FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
     response.headers().setInt("content-length", 0);
+    return response;
+  }
+
+  /** Creates HttpResponse given status, redirection location, and other necessary inputs */
+  public static FullHttpResponse makeRedirectResponse(
+      HttpResponseStatus status, String location, boolean keepAlive, boolean hsts) {
+    FullHttpResponse response = makeHttpResponse("", status);
+    response.headers().set("content-type", "text/plain").set("content-length", "0");
+    if (location != null) {
+      response.headers().set("location", location);
+    }
+    if (keepAlive) {
+      response.headers().set("connection", "keep-alive");
+    }
+    if (hsts) {
+      response.headers().set("Strict-Transport-Security", "max-age=31536000");
+    }
     return response;
   }
 
@@ -163,10 +181,11 @@ public class TestUtils {
 
     private String testMessage;
 
-    public TestStep(Protocol protocol, String testMessage) {
+    public TestStep(Protocol protocol, String testMessage, LocalAddress address) {
       this.protocol = protocol;
       this.testMessage = testMessage;
-      duration = Duration.ZERO;
+      this.address = address;
+      this.duration = Duration.ZERO;
     }
     @Override
     protected DuplexMessageTest message() {

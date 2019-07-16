@@ -16,24 +16,33 @@ package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
+import static google.registry.monitoring.blackbox.ProbingStep.DEFAULT_ADDRESS;
 import static google.registry.monitoring.blackbox.TestUtils.makeHttpResponse;
 import static google.registry.monitoring.blackbox.TestUtils.makeHttpGetRequest;
+import static google.registry.monitoring.blackbox.TestUtils.makeRedirectResponse;
 
 import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.NewChannelAction;
 import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
+import google.registry.monitoring.blackbox.TestServers.TestServer;
+import google.registry.monitoring.blackbox.TestServers.WebWhoisServer;
+import google.registry.monitoring.blackbox.TestUtils.TestProvider;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import javax.inject.Provider;
 import org.joda.time.Duration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,19 +61,26 @@ public class WebWhoisActionHandlerTest {
   private static final String REDIRECT_HOST = "www.example.com";
   private static final String REDIRECT_PATH = "/test/path";
   private static final String TARGET_HOST = "whois.nic.tld";
+  private static final String DUMMY_URL = "__WILL_NOT_WORK__";
   private static final Duration DEFAULT_DURATION = new Duration(0L);
+  private static final String ADDRESS_STRING ="TEST_IDENTIFICATION";
 
-
+  private LocalAddress address;
   private EmbeddedChannel channel;
   private ActionHandler actionHandler;
   private ProbingAction probingAction;
+  private Provider<? extends ChannelHandler> actionHandlerProvider;
+  private TestServer server;
 
+  private void generateLocalAddress() {
+    address = new LocalAddress(ADDRESS_STRING + System.currentTimeMillis());
+  }
   /** Creates default protocol with empty list of handlers and specified other inputs */
   private Protocol createProtocol(String name, int port) {
     return Protocol.builder()
         .name(name)
         .port(port)
-        .handlerProviders(ImmutableList.of())
+        .handlerProviders(ImmutableList.of(actionHandlerProvider))
         .persistentConnection(false)
         .build();
   }
@@ -72,56 +88,57 @@ public class WebWhoisActionHandlerTest {
   /** Initializes new WebWhoisActionHandler */
   private void setupActionHandler() {
     actionHandler = new WebWhoisActionHandler();
+    actionHandlerProvider = new TestProvider<>(actionHandler);
   }
 
   /** Sets up testing channel with requisite attributes */
   private void setupChannel(Protocol protocol, HttpRequestMessage outboundMessage) {
-    setupActionHandler();
-    setupProbingAction(
+    setupProbingActionBasic(
         protocol,
         outboundMessage,
-        new Bootstrap()
-          .group(new NioEventLoopGroup())
-          .channel(LocalChannel.class));
+        makeBootstrap(new NioEventLoopGroup(1)));
     channel = new EmbeddedChannel(actionHandler);
     channel.attr(PROBING_ACTION_KEY).set(probingAction);
   }
 
+  private Bootstrap makeBootstrap(EventLoopGroup group) {
+    return new Bootstrap()
+        .group(group)
+        .channel(LocalChannel.class);
+  }
   /**Sets up probingAction for when testing redirection */
-  private void setupProbingAction(Protocol protocol, HttpRequestMessage outboundMessage, Bootstrap bootstrap) {
+  private void setupProbingActionBasic(Protocol protocol, HttpRequestMessage outboundMessage, Bootstrap bootstrap) {
     probingAction = NewChannelAction.<LocalChannel>builder()
         .protocol(protocol)
         .outboundMessage(outboundMessage)
         .delay(DEFAULT_DURATION)
         .bootstrap(bootstrap)
         .host(TARGET_HOST)
+        .address(DEFAULT_ADDRESS)
         .build();
   }
 
-
-
-  /** Creates HttpResponse given status, redirection location, and other necessary inputs */
-  private static FullHttpResponse makeRedirectResponse(
-      HttpResponseStatus status, String location, boolean keepAlive, boolean hsts) {
-    FullHttpResponse response = makeHttpResponse("", status);
-    response.headers().set("content-type", "text/plain").set("content-length", "0");
-    if (location != null) {
-      response.headers().set("location", location);
-    }
-    if (keepAlive) {
-      response.headers().set("connection", "keep-alive");
-    }
-    if (hsts) {
-      response.headers().set("Strict-Transport-Security", "max-age=31536000");
-    }
-    return response;
+  private void setupProbingActionAdvanced(Protocol protocol, HttpRequestMessage outboundMessage, Bootstrap bootstrap, String host) {
+    probingAction = NewChannelAction.<LocalChannel>builder()
+        .protocol(protocol)
+        .outboundMessage(outboundMessage)
+        .delay(DEFAULT_DURATION)
+        .bootstrap(bootstrap)
+        .host(host)
+        .address(address)
+        .build();
   }
 
+  private void setupLocalServer(String redirectInput, String destinationInput, EventLoopGroup group) {
+    server = WebWhoisServer.strippedServer(group, address, redirectInput, destinationInput);
+  }
 
   @Test
-  public void testSuccess_responseOk() throws Exception {
+  public void testBasic_responseOk() throws Exception {
     //setup
+    setupActionHandler();
     Protocol initialProtocol = createProtocol("responseOk", 0);
+    generateLocalAddress();
     HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest("", ""));
     setupChannel(initialProtocol, msg);
 
@@ -148,13 +165,13 @@ public class WebWhoisActionHandlerTest {
   }
 
   @Test
-  public void testSuccess_responseBad() {
+  public void testBasic_responseFailure() {
     //setup
     HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest("", ""));
+    setupActionHandler();
     Protocol initialProtocol = createProtocol("responseBad", 0);
+    generateLocalAddress();
     setupChannel(initialProtocol, msg);
-
-
 
     //stores future
     ChannelFuture future = actionHandler.getFuture();
@@ -164,7 +181,8 @@ public class WebWhoisActionHandlerTest {
     ChannelPromise testPromise = channel.newPromise();
     future.addListener(f -> testPromise.setSuccess());
 
-    FullHttpResponse response = HttpResponseMessage.fromResponse(makeHttpResponse(HttpResponseStatus.BAD_REQUEST));
+    FullHttpResponse response = HttpResponseMessage
+        .fromResponse(makeHttpResponse(HttpResponseStatus.BAD_REQUEST));
 
     //assesses that future listener isn't triggered yet.
     assertThat(testPromise.isSuccess()).isFalse();
@@ -173,25 +191,63 @@ public class WebWhoisActionHandlerTest {
 
     //assesses that listener is triggered, but event is not success
     assertThat(testPromise.isSuccess()).isTrue();
-    assertThat(future.isSuccess()).isFalse();
+    assertThat(future.isSuccess()).isTrue();
 
     //ensures Protocol is the same
     assertThat(channel.attr(PROBING_ACTION_KEY).get()).isEqualTo(probingAction);
   }
+    @Test
+    public void testBasic_responseError() {
+      //setup
+      HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest("", ""));
+      setupActionHandler();
+      Protocol initialProtocol = createProtocol("responseError", 0);
+      generateLocalAddress();
+      setupChannel(initialProtocol, msg);
+
+      //stores future
+      ChannelFuture future = actionHandler.getFuture();
+      channel.writeOutbound(msg);
+
+      //setup for checker to ensure future listener isn't triggered to early
+      ChannelPromise testPromise = channel.newPromise();
+      future.addListener(f -> testPromise.setSuccess());
+
+      FullHttpResponse response = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.MOVED_PERMANENTLY, DUMMY_URL, true, false));
+
+      //assesses that future listener isn't triggered yet.
+      assertThat(testPromise.isSuccess()).isFalse();
+
+      channel.writeInbound(response);
+
+      //assesses that listener is triggered, and event is success
+      assertThat(testPromise.isSuccess()).isTrue();
+      assertThat(future.isSuccess()).isTrue();
+      //ensures Protocol is the same
+      assertThat(channel.attr(PROBING_ACTION_KEY).get()).isEqualTo(probingAction);
+  }
 
   @Test
-  public void testSuccess_redirectCloseChannel() {
+  public void testBasic_redirectCloseChannel() {
     //setup
-    Protocol initialProtocol = createProtocol("redirectHttp", 0);
     HttpRequestMessage outboundMessage = HttpRequestMessage.fromRequest(makeHttpGetRequest("", ""));
+    setupActionHandler();
+    Protocol initialProtocol = createProtocol("redirectHttp", 0);
+    generateLocalAddress();
     setupChannel(initialProtocol, outboundMessage);
 
     //stores future
     ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(outboundMessage);
 
+    //setup for checker to ensure future listener isn't triggered to early
+    ChannelPromise testPromise = channel.newPromise();
+    future.addListener(f -> testPromise.setSuccess());
+
     FullHttpResponse response = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.MOVED_PERMANENTLY, HTTP_REDIRECT + REDIRECT_HOST, true, false));
 
+    //checks that future has not been set to successful or a failure
+    assertThat(testPromise.isSuccess()).isFalse();
 
     channel.writeInbound(response);
 
@@ -202,13 +258,16 @@ public class WebWhoisActionHandlerTest {
   }
 
   @Test
-  public void testSuccess_redirectHost() {
+  public void testBasic_redirectHost() {
     //setup
+    HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest(TARGET_HOST, ""));
+    setupActionHandler();
     Protocol initialProtocol = createProtocol("redirectHttp", HTTP_PORT);
-    setupChannel(initialProtocol, HttpRequestMessage.fromRequest(makeHttpGetRequest(TARGET_HOST, "")));
+    generateLocalAddress();
+    setupChannel(initialProtocol, msg);
     HttpResponse originalResponse = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.FOUND, HTTPS_REDIRECT + REDIRECT_HOST + REDIRECT_PATH, true, false));
 
-    HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest(TARGET_HOST, ""));
+
     //store future
     ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(msg);
@@ -225,8 +284,43 @@ public class WebWhoisActionHandlerTest {
     assertThat(newProtocol.port()).isEqualTo(HTTPS_PORT);
     assertThat(newAction.host()).isEqualTo(REDIRECT_HOST);
     assertThat(newAction.path()).isEqualTo(REDIRECT_PATH);
-
-
   }
+
+  @Test
+  public void testAdvanced_responseOk() {
+    //setup
+    EventLoopGroup group = new NioEventLoopGroup(1);
+    HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest(TARGET_HOST, ""));
+    setupActionHandler();
+    Protocol initialProtocol = createProtocol("responseOk", 0);
+    generateLocalAddress();
+    setupProbingActionAdvanced(initialProtocol, msg, makeBootstrap(group), TARGET_HOST);
+    setupLocalServer("", TARGET_HOST, group);
+
+    //stores future
+    ChannelFuture future = probingAction.call();
+
+    //assesses that we successfully received good response and protocol is unchanged
+    assertThat(future.syncUninterruptibly().isSuccess()).isTrue();
+  }
+
+  @Test
+  public void testAdvanced_responseFailure() {
+    //setup
+    EventLoopGroup group = new NioEventLoopGroup(1);
+    HttpRequestMessage msg = HttpRequestMessage.fromRequest(makeHttpGetRequest(DUMMY_URL, ""));
+    setupActionHandler();
+    Protocol initialProtocol = createProtocol("responseOk", 0);
+    generateLocalAddress();
+    setupProbingActionAdvanced(initialProtocol, msg, makeBootstrap(group), DUMMY_URL);
+    setupLocalServer("", TARGET_HOST, group);
+
+    //stores future
+    ChannelFuture future = probingAction.call();
+
+    //assesses that we successfully received good response and protocol is unchanged
+    assertThat(future.syncUninterruptibly().isSuccess()).isTrue();
+  }
+
 }
 

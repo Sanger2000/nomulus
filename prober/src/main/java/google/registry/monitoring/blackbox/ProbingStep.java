@@ -20,6 +20,7 @@ import google.registry.monitoring.blackbox.messages.EppClientException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.local.LocalAddress;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 import java.io.IOException;
@@ -29,10 +30,12 @@ import org.joda.time.Duration;
 
 public abstract class ProbingStep<C extends AbstractChannel> implements Consumer<Token> {
 
-
+  public static final LocalAddress DEFAULT_ADDRESS = new LocalAddress("DEFAULT_ADDRESS_CHECKER");
   protected static final Duration DEFAULT_DURATION = new Duration(2000L);
-  private static final Timer timer = new HashedWheelTimer();
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Default {@link LocalAddress} when not initialized in {@code Builder} */
+  protected LocalAddress address = DEFAULT_ADDRESS;
 
   private boolean isLastStep = false;
   private ProbingStep<C> nextStep;
@@ -84,6 +87,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
           .outboundMessage(message)
           .host(token.getHost())
           .bootstrap(parent.getBootstrap())
+          .address(address)
           .build();
 
     }

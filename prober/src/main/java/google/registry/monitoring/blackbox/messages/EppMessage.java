@@ -46,7 +46,7 @@ public class EppMessage {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static String TEMPLATE_BASE_PATH = "google/registry/monitoring/blackbox/xml/";
-  protected static int HEADER_LENGTH = 4;
+  public static int HEADER_LENGTH = 4;
 
   private static final XPath xpath;
   private static final Schema eppSchema;

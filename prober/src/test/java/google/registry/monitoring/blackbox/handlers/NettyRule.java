@@ -23,8 +23,11 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.truth.ThrowableSubject;
 import google.registry.monitoring.blackbox.ProbingAction;
+import google.registry.monitoring.blackbox.TestServers.TestServer.EchoHandler;
+import google.registry.monitoring.blackbox.TestServers.WebWhoisServer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -49,9 +52,12 @@ import org.junit.rules.ExternalResource;
 /**
  * Helper for setting up and testing client / server connection with netty.
  *
- * <p>Used in {@link SslClientInitializerTest} and {@link google.registry.monitoring.blackbox.ProbingActionTest}
+ * <p>Code based on and almost identical to {@link google.registry.proxy.handler.NettyRule}.
+ * Used in {@link SslClientInitializerTest}, {@link ProbingActionTest}, and {@link ProbingSequenceStepTest} </p>
  */
 public final class NettyRule extends ExternalResource {
+
+
 
   // All I/O operations are done inside the single thread within this event loop group, which is
   // different from the main test thread. Therefore synchronizations are required to make sure that
@@ -63,6 +69,7 @@ public final class NettyRule extends ExternalResource {
     eventLoopGroup = e;
   }
   private final EventLoopGroup eventLoopGroup;
+  private WebWhoisServer webWhoisServer;
 
   // Handler attached to server's channel to record the request received.
   private EchoHandler echoHandler;
@@ -76,22 +83,7 @@ public final class NettyRule extends ExternalResource {
   public void setUpServer(LocalAddress localAddress, ChannelHandler handler) {
     checkState(echoHandler == null, "Can't call setUpServer twice");
     echoHandler = new EchoHandler();
-    ChannelInitializer<LocalChannel> serverInitializer =
-        new ChannelInitializer<LocalChannel>() {
-          @Override
-          protected void initChannel(LocalChannel ch) {
-            // Add the given handler
-            ch.pipeline().addLast(handler);
-            // Add the "echoHandler" last to log the incoming message and send it back
-            ch.pipeline().addLast(echoHandler);
-          }
-        };
-    ServerBootstrap sb =
-        new ServerBootstrap()
-            .group(eventLoopGroup)
-            .channel(LocalServerChannel.class)
-            .childHandler(serverInitializer);
-    ChannelFuture unusedFuture = sb.bind(localAddress).syncUninterruptibly();
+    webWhoisServer = new WebWhoisServer(eventLoopGroup, localAddress, ImmutableList.of(handler, echoHandler));
   }
 
   /** Sets up a client channel connecting to the give local address. */
@@ -166,36 +158,7 @@ public final class NettyRule extends ExternalResource {
             assertThrows(ExecutionException.class, () -> dumpHandler.getResponseFuture().get())));
   }
 
-  /**
-   * A handler that echoes back its inbound message. The message is also saved in a promise for
-   * inspection later.
-   */
-  private static class EchoHandler extends ChannelInboundHandlerAdapter {
 
-    private final CompletableFuture<String> requestFuture = new CompletableFuture<>();
-
-    Future<String> getRequestFuture() {
-      return requestFuture;
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-      // In the test we only send messages of type ByteBuf.
-
-      assertThat(msg).isInstanceOf(ByteBuf.class);
-      String request = ((ByteBuf) msg).toString(UTF_8);
-      // After the message is written back to the client, fulfill the promise.
-      ChannelFuture unusedFuture =
-          ctx.writeAndFlush(msg).addListener(f -> requestFuture.complete(request));
-    }
-
-    /** Saves any inbound error as the cause of the promise failure. */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-      ChannelFuture unusedFuture =
-          ctx.channel().closeFuture().addListener(f -> requestFuture.completeExceptionally(cause));
-    }
-  }
 
   /** A handler that dumps its inbound message to a promise that can be inspected later. */
   private static class DumpHandler extends ChannelInboundHandlerAdapter {

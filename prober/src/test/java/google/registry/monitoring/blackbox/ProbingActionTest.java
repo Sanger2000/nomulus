@@ -143,9 +143,6 @@ public class ProbingActionTest {
     assertThat(future.isSuccess()).isTrue();
 
     assertThat(testHandler.toString()).isEqualTo(SECONDARY_TEST_MESSAGE);
-
-
-
   }
 
   @Test
@@ -164,8 +161,6 @@ public class ProbingActionTest {
     //Tests to see that, since server responds, we have set future to true
     assertThat(future.isSuccess());
     assertThat(testHandler.toString()).isEqualTo(TEST_MESSAGE);
-
-
   }
 }
 
