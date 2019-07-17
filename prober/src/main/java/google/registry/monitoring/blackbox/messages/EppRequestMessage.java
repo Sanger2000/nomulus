@@ -1,11 +1,13 @@
 package google.registry.monitoring.blackbox.messages;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Internal;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.io.IOException;
 import java.util.Map;
-import org.w3c.dom.Document;
 
 public abstract class EppRequestMessage extends EppMessage implements OutboundMessageType {
 
@@ -14,21 +16,28 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
   private final static String CLIENT_PASSWORD_KEY = "//eppns:pw";
   private final static String CLIENT_TRID_KEY = "//eppns:clTRID";
 
-
-
-  protected Document message;
   protected ImmutableMap<String, String> replacements;
+  protected String clTRID;
   private String template;
 
 
-  public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException {
+  public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
+    this.clTRID = clTRID;
     Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
         .putAll(replacements)
         .put(DOMAIN_KEY, newDomain)
         .put(CLIENT_TRID_KEY, clTRID)
         .build();
-    message = getEppDocFromTemplate(template, nextArguments);
+    try {
+      message = getEppDocFromTemplate(template, nextArguments);
+    } catch (IOException | EppClientException e) {
+      throw new InternalException(e);
+    }
     return this;
+  }
+
+  public String getClTRID() {
+    return clTRID;
   }
 
 
@@ -59,8 +68,13 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
-      message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
+      this.clTRID = clTRID;
+      try {
+        message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
+      } catch (IOException | EppClientException e) {
+        throw new InternalException(e);
+      }
       return this;
     }
   }
@@ -79,12 +93,17 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
+      this.clTRID = clTRID;
       Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
           .putAll(replacements)
           .put(CLIENT_TRID_KEY, clTRID)
           .build();
-      message = getEppDocFromTemplate(template, nextArguments);
+      try {
+        message = getEppDocFromTemplate(template, nextArguments);
+      } catch (IOException | EppClientException e) {
+        throw new InternalException(e);
+      }
       return this;
     }
   }
@@ -143,8 +162,13 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws IOException, EppClientException{
-      message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
+      this.clTRID = clTRID;
+      try {
+        message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
+      } catch (IOException | EppClientException e) {
+        throw new InternalException(e);
+      }
       return this;
     }
   }

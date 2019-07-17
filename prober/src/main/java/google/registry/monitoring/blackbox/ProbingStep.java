@@ -16,13 +16,12 @@ package google.registry.monitoring.blackbox;
 
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.local.LocalAddress;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
 import java.io.IOException;
 import java.util.function.Consumer;
 import org.joda.time.Duration;
@@ -67,7 +66,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     return this;
   }
 
-  private ProbingAction generateAction(Token token) throws IOException, EppClientException {
+  private ProbingAction generateAction(Token token) throws InternalException {
     ProbingAction generatedAction;
 
     OutboundMessageType message = token.modifyMessage(message());
@@ -104,12 +103,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     ProbingAction nextAction;
     try {
       nextAction = generateAction(token);
-    } catch(EppClientException e) {
-      logger.atWarning().withCause(e).log("Error in Action Generation");
-      nextStep.accept(generateNextToken(token));
-      return;
-
-    } catch(IOException e) {
+    } catch(InternalException e) {
       logger.atWarning().withCause(e).log("Error in Action Generation");
       nextStep.accept(generateNextToken(token));
       return;

@@ -3,9 +3,11 @@ package google.registry.monitoring.blackbox.messages;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.ResponseException;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -47,9 +49,33 @@ public class EppMessage {
 
   private static String TEMPLATE_BASE_PATH = "google/registry/monitoring/blackbox/xml/";
   public static int HEADER_LENGTH = 4;
+  private final static DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
 
   private static final XPath xpath;
   private static final Schema eppSchema;
+
+  protected Document message;
+
+  // These are the xpath expressions for EPP success status codes and failure status codes.
+  // commands can send one or the other to implement XPASS or XFAIL testing.
+  @VisibleForTesting
+  static final String XPASS_EXPRESSION =
+      String.format("//eppns:result[@code>='%s'][@code<'%s']", 1000, 2000);
+
+  @VisibleForTesting
+  static final String XFAIL_EXPRESSION =
+      String.format("//eppns:result[@code>='%s'][@code<'%s']", 2000, 3000);
+
+  // "Security" errors from RFC 5730, plus the error we get when we end
+  // up no longer logged (see b/28196510).
+  // 2002    "Command use error"
+  // 2200    "Authentication error"
+  // 2201    "Authorization error"
+  // 2202    "Invalid authorization information"
+  @VisibleForTesting
+  static final String AUTHENTICATION_ERROR =
+      "//eppns:epp/eppns:response/eppns:result[@code!='2002' and @code!='2200' "
+          + "and @code!='2201' and @code!='2202']";
 
   // As per RFC 1035 section 2.3.4 http://tools.ietf.org/html/rfc1035#page-10 and updated by
   // http://tools.ietf.org/html/rfc1123#page-13 which suggests a domain part length
@@ -78,6 +104,7 @@ public class EppMessage {
 
     xpath = XPathFactory.newInstance().newXPath();
     xpath.setNamespaceContext(new EppNamespaceContext());
+    docBuilderFactory.setNamespaceAware(true);
 
     String path = "com/google/domain/registry/monitoring/blackbox/xml/xsd/";
     StreamSource[] sources;
@@ -191,13 +218,13 @@ public class EppMessage {
    * @throws EppClientException if the EPP response cannot be read, parsed, or doesn't containing
    *     matching data specified in expressions
    */
-  public static void verifyEppResponse(Document xml, List<String> expressions, boolean validate)
-      throws EppClientException, IOException {
+  protected static void verifyEppResponse(Document xml, List<String> expressions, boolean validate)
+      throws ResponseException {
     if (validate) {
       try {
         eppValidate(xml);
-      } catch (SAXException e) {
-        throw new EppClientException(e);
+      } catch (SAXException | IOException e) {
+        throw new ResponseException(e);
       }
     }
 
@@ -205,11 +232,11 @@ public class EppMessage {
       for (String exp : expressions) {
         NodeList nodes = (NodeList) xpath.evaluate(exp, xml, XPathConstants.NODESET);
         if (nodes.getLength() == 0) {
-          throw new EppClientException("invalid EPP response. failed expression " + exp);
+          throw new ResponseException("invalid EPP response. failed expression " + exp);
         }
       }
     } catch (XPathExpressionException e) {
-      throw new EppClientException(e);
+      throw new ResponseException(e);
     }
   }
 
@@ -264,7 +291,7 @@ public class EppMessage {
    * @return the resulting byte array.
    * @throws EppClientException if the transform fails
    */
-  public static byte[] xmlDocToByteArray(Document xml) throws EppClientException {
+  protected static byte[] xmlDocToByteArray(Document xml) throws EppClientException {
     try {
       Transformer transformer = TransformerFactory.newInstance().newTransformer();
       StreamResult result = new StreamResult(new StringWriter());
@@ -283,6 +310,27 @@ public class EppMessage {
     } catch (TransformerException | UnsupportedEncodingException e) {
       throw new EppClientException(e);
     }
+  }
+  /**
+   * A helper method to transform an byte array to an XML
+   * {@link Document} using {@code docBuilderFactory}
+   *
+   * @param responseBuffer the byte array to transform
+   * @return the resulting Document
+   * @throws EppClientException if the transform fails
+   */
+  protected static Document byteArrayToXmlDoc(byte[] responseBuffer)
+      throws ResponseException {
+    Document xml;
+    try {
+      DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+      ByteArrayInputStream byteStream = new ByteArrayInputStream(responseBuffer);
+      xml = builder.parse(byteStream);
+    } catch (ParserConfigurationException | SAXException | IOException e) {
+      throw new ResponseException(e);
+    }
+    return xml;
+
   }
 
   /**
@@ -311,9 +359,7 @@ public class EppMessage {
       throws IOException, EppClientException {
     Document xmlDoc;
     try (InputStream is = EppMessage.class.getClassLoader().getResourceAsStream(TEMPLATE_BASE_PATH + template)) {
-      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-      factory.setNamespaceAware(true);
-      DocumentBuilder builder = factory.newDocumentBuilder();
+      DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       xmlDoc = builder.parse(is);
       for (String key : replacements.keySet()) {
         NodeList nodes = (NodeList) xpath.evaluate(key, xmlDoc, XPathConstants.NODESET);

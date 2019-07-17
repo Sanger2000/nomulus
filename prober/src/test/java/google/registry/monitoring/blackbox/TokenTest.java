@@ -2,10 +2,9 @@ package google.registry.monitoring.blackbox;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import google.registry.monitoring.blackbox.Tokens.WebWhoisToken;
-import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;

@@ -1,6 +1,7 @@
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import java.io.IOException;
@@ -23,7 +24,7 @@ public class EppToken extends Token {
 
   @Override
   public OutboundMessageType modifyMessage(OutboundMessageType originalMessage)
-      throws IOException, EppClientException {
+      throws InternalException {
     return ((EppRequestMessage) originalMessage).modifyMessage(
         getNewTRID(),
         currentDomainName

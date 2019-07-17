@@ -14,7 +14,8 @@
 
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.messages.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
 import java.io.IOException;
@@ -28,7 +29,7 @@ public abstract class Token {
 
   public abstract Token next();
   public abstract OutboundMessageType modifyMessage(OutboundMessageType message)
-      throws IOException, EppClientException;
+      throws InternalException;
   public abstract String getHost();
 
   public void channel(Channel channel) {

@@ -15,6 +15,10 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.flogger.FluentLogger;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.ResponseException;
+import google.registry.monitoring.blackbox.exceptions.ServerSideException;
+import google.registry.monitoring.blackbox.messages.EppResponseMessage.ResponseType;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -37,6 +41,7 @@ import io.netty.channel.ChannelPromise;
 public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundMessageType> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static ResponseType status;
 
   protected ChannelPromise finished;
 
@@ -53,8 +58,9 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   }
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws Exception {
+  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws ResponseException {
     //simply marks finished as success
+    status = ResponseType.SUCCESS;
     finished.setSuccess();
   }
 
@@ -67,10 +73,19 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().pipeline().toString()));
 
 
-    if (ServerSideException.class.isInstance(cause)) {
-      //TODO - add in metrics handling to inform MetricsCollector the status of the task was an ERROR
+    if (ResponseException.class.isInstance(cause)) {
+      //TODO - add in metrics handling to inform MetricsCollector the status of the task was a FAILURE
+      status = ResponseType.FAILURE;
       logger.atInfo().log(cause.getMessage());
       finished.setSuccess();
+    } else if (ServerSideException.class.isInstance(cause)) {
+      //TODO - add in metrics handling to inform MetricsCollector the status of the task was an ERROR
+      status = ResponseType.ERROR;
+      logger.atInfo().log(cause.getMessage());
+      finished.setSuccess();
+    } else if (InternalException.class.isInstance(cause)){
+      logger.atSevere().withCause(cause).log("Severe internal error");
+      finished.setFailure(cause);
     } else {
       finished.setFailure(cause);
     }

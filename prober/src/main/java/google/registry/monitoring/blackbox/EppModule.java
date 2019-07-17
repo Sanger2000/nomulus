@@ -25,6 +25,7 @@ import google.registry.monitoring.blackbox.handlers.MessageHandler;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
+import google.registry.monitoring.blackbox.messages.EppResponseMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -103,7 +104,7 @@ public class EppModule {
   @Provides
   @EppProtocol
   static MessageHandler provideMessageHandler() {
-    return new EppMessageHandler();
+    return new EppMessageHandler(new EppResponseMessage.Success());
   }
 
   @Provides
