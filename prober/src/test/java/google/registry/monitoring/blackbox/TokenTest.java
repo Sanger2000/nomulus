@@ -5,6 +5,7 @@ import static com.google.common.truth.Truth.assertThat;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import google.registry.monitoring.blackbox.Tokens.WebWhoisToken;
 import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
@@ -30,8 +31,7 @@ public class TokenTest {
     try {
       HttpRequestMessage secondMessage = (HttpRequestMessage) webToken.modifyMessage(message);
       assertThat(secondMessage.headers().get("host")).isEqualTo(PREFIX+TEST_DOMAIN);
-    } catch (IOException e) {
-    } catch(EppClientException e) {
+    } catch(InternalException e) {
     }
 
 

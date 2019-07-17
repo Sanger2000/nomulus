@@ -14,19 +14,17 @@
 
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
-import javax.inject.Inject;
 
 public class WebWhoisToken extends Token {
-  private static final String prefix = "whois.nic.";
-  private static final String name = "app";
+  private static final String PREFIX = "whois.nic.";
+  private String name;
   private String host;
 
-  @Inject
-  public WebWhoisToken(@WebWhoIs String domainName) {
-    host = prefix + domainName;
+  public WebWhoisToken(String domainName) {
+    name = domainName;
+    host = PREFIX + name;
   }
 
   @Override

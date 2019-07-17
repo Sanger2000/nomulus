@@ -18,6 +18,7 @@ import dagger.Module;
 import dagger.Provides;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import google.registry.monitoring.blackbox.Tokens.WebWhoisToken;
+import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
 import javax.inject.Qualifier;
 
 @Module
@@ -27,14 +28,10 @@ public class TokenModule {
   public @interface WebWhoIs {}
 
   @Provides
-  static Token provideToken(WebWhoisToken token) {
-    return token;
+  @WebWhoisProtocol
+  static Token provideToken(@WebWhoisProtocol String domainName) {
+    return new WebWhoisToken(domainName);
   }
 
-  @Provides
-  @WebWhoIs
-  static String domainName() {
-    return "app";
-  }
 
 }

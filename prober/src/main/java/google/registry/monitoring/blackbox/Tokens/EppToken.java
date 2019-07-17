@@ -50,7 +50,7 @@ public class EppToken extends Token {
    */
   private synchronized String getNewTRID() {
     return String.format("prober-%s-%d-%d",
-        localHostname,
+        host,
         System.currentTimeMillis(),
         clientIdSuffix++);
   }

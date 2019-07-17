@@ -8,7 +8,7 @@ import com.google.monitoring.metrics.FibonacciFitter;
 import com.google.monitoring.metrics.IncrementableMetric;
 import com.google.monitoring.metrics.LabelDescriptor;
 import com.google.monitoring.metrics.MetricRegistryImpl;
-import google.registry.util.NonFinalForTesting;
+//import google.registry.util.NonFinalForTesting;
 import io.netty.handler.codec.http.FullHttpResponse;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -30,7 +30,7 @@ public class MetricsCollector {
   private static final ImmutableSet<LabelDescriptor> LABELS =
       ImmutableSet.of(
           LabelDescriptor.create("protocol", "Name of the protocol."),
-          LabelDescriptor.create());
+          LabelDescriptor.create("test1", "test2"));
 
   static final IncrementableMetric requestsCounter =
       MetricRegistryImpl.getDefault()
@@ -79,7 +79,7 @@ public class MetricsCollector {
               DEFAULT_LATENCY_FITTER);
 
   @Inject
-  BackendMetrics() {}
+  MetricsCollector() {}
 
   /**
    * Resets all backend metrics.
@@ -95,13 +95,13 @@ public class MetricsCollector {
     latencyMs.reset();
   }
 
-  @NonFinalForTesting
+  //@NonFinalForTesting
   public void requestSent(String protocol, String certHash, int bytes) {
     requestsCounter.increment(protocol, certHash);
     requestBytes.record(bytes, protocol, certHash);
   }
 
-  @NonFinalForTesting
+  //@NonFinalForTesting
   public void responseReceived(
       String protocol, String certHash, FullHttpResponse response, long latency) {
     latencyMs.record(latency, protocol, certHash);

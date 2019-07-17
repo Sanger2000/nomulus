@@ -14,17 +14,16 @@
 
 package google.registry.monitoring.blackbox.Tokens;
 
-import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
-import java.io.IOException;
 
+/** Superclass that represents information passed to each {@link ProbingStep}
+ * for each loop in a {@link ProbingSequence}.
+ */
 public abstract class Token {
 
-
   protected String localHostname;
-  protected String domainName;
   protected Channel channel;
 
   public abstract Token next();

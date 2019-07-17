@@ -22,7 +22,7 @@ import dagger.Provides;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import google.registry.monitoring.blackbox.WebWhoisModule.HttpWhoisProtocol;
 import google.registry.monitoring.blackbox.WebWhoisModule.HttpsWhoisProtocol;
-import google.registry.monitoring.blackbox.WebWhoisModule.WhoisProtocol;
+import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -31,10 +31,16 @@ import java.util.Set;
 import javax.inject.Qualifier;
 import javax.inject.Singleton;
 
+/**
+ * {@link Dagger} main module, which Provides {@link ProbingSequences} and houses {@link ProberComponent}
+ *
+ * <p>Provides</p>
+ */
 @Module
 public class ProberModule {
 
   @Provides
+  @Singleton
   EventLoopGroup provideEventLoopGroup() {
     return new NioEventLoopGroup();
   }
@@ -99,9 +105,13 @@ public class ProberModule {
       })
   public interface ProberComponent {
 
+    @HttpWhoisProtocol ProbingSequence<NioSocketChannel> provideHttpWhoisSequence();
+
+    @HttpsWhoisProtocol ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence();
+
     ImmutableMap<Integer, Protocol> providePortToProtocolMap();
 
-    Token provideToken();
+    @WebWhoisProtocol Token provideWebWhoisToken();
 
   }
 }

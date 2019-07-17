@@ -14,7 +14,6 @@
 
 package google.registry.monitoring.blackbox;
 
-import google.registry.monitoring.blackbox.ProberModule.ProberComponent;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractChannel;
@@ -29,9 +28,8 @@ public class ProbingSequence<C extends AbstractChannel> {
     return bootstrap;
   }
 
-  public void start(ProberComponent proberComponent) {
-    // create a new unique token;
-    Token token = proberComponent.provideToken();
+  public void start(Token token) {
+    // calls the first step with input token;
     firstStep.accept(token);
   }
 
