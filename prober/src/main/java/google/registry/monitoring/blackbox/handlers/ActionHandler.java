@@ -15,6 +15,9 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.flogger.FluentLogger;
+import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.ResponseException;
+import google.registry.monitoring.blackbox.exceptions.ServerSideException;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -38,6 +41,12 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  /** Three types of responses received down pipeline */
+  public enum ResponseType {SUCCESS, FAILURE, ERROR}
+
+  /** Status of response for current {@link ActionHandler} instance */
+  private static ResponseType status;
+
   protected ChannelPromise finished;
 
   /** Takes in {@link OutboundMessageType} type and saves for subclasses. Then returns initialized {@link ChannelPromise}*/
@@ -53,8 +62,9 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   }
 
   @Override
-  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws Exception {
+  public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws ResponseException {
     //simply marks finished as success
+    status = ResponseType.SUCCESS;
     finished.setSuccess();
   }
 
@@ -66,8 +76,27 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().toString(),
         ctx.channel().pipeline().toString()));
 
-    finished.setFailure(cause);
+
+    if (ResponseException.class.isInstance(cause)) {
+      //TODO - add in metrics handling to inform MetricsCollector the status of the task was a FAILURE
+      status = ResponseType.FAILURE;
+      logger.atInfo().log(cause.getMessage());
+      finished.setSuccess();
+    } else if (ServerSideException.class.isInstance(cause)) {
+      //TODO - add in metrics handling to inform MetricsCollector the status of the task was an ERROR
+      status = ResponseType.ERROR;
+      logger.atInfo().log(cause.getMessage());
+      finished.setSuccess();
+    } else if (InternalException.class.isInstance(cause)){
+      logger.atSevere().withCause(cause).log("Severe internal error");
+      finished.setFailure(cause);
+    } else {
+      finished.setFailure(cause);
+    }
+
+    //due to failure, close channel
     ChannelFuture closedFuture = ctx.channel().close();
     closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
   }
 }
+
