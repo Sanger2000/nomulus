@@ -27,6 +27,10 @@ dependencies {
     compile deps['com.google.dagger:dagger']
     compile deps['com.google.flogger:flogger']
     compile deps['com.google.guava:guava']
+    //start backend monitoring dependencies
+    compile deps['com.google.monitoring-client:metrics']
+    compile deps['com.google.monitoring-client:stackdriver']
+    //end backend monitoring dependencies
     compile deps['io.netty:netty-buffer']
     compile deps['io.netty:netty-codec-http']
     compile deps['io.netty:netty-codec']
@@ -35,8 +39,11 @@ dependencies {
     compile deps['io.netty:netty-transport']
     compile deps['javax.inject:javax.inject']
     compile deps['joda-time:joda-time']
+    //Start ssl dependencies
     compile deps['org.bouncycastle:bcpkix-jdk15on']
     compile deps['org.bouncycastle:bcprov-jdk15on']
+    //end ssl dependencies
+    //compile project(':util')
 
     runtime deps['com.google.flogger:flogger-system-backend']
     runtime deps['com.google.auto.value:auto-value']
