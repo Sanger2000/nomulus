@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import google.registry.monitoring.blackbox.ProberModule.ProberComponent;
 import google.registry.monitoring.blackbox.Tokens.Token;
 import io.netty.channel.socket.nio.NioSocketChannel;
+
 /**
  * Main class of the Prober, which obtains the {@link ProbingSequences}s provided by {@link Dagger} and runs them
  */

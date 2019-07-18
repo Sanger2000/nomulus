@@ -1,4 +1,4 @@
-// Copyright 2018 The Nomulus Authors. All Rights Reserved.
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,7 @@ import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import java.nio.channels.Channel;
 import java.util.Set;
-import javax.inject.Qualifier;
 import javax.inject.Singleton;
 
 /**
@@ -38,6 +36,8 @@ import javax.inject.Singleton;
  */
 @Module
 public class ProberModule {
+  private final int httpWhoIsPort = 80;
+  private final int httpsWhoIsPort = 443;
 
   @Provides
   @Singleton
@@ -70,10 +70,6 @@ public class ProberModule {
         .eventLoopGroup(eventLoopGroup)
         .build();
   }
-
-
-  private final int httpWhoIsPort = 80;
-  private final int httpsWhoIsPort = 443;
 
   @Provides
   @HttpWhoisProtocol

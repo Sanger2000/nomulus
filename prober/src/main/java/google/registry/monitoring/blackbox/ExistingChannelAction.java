@@ -19,8 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 
 /**
- *
- * Subclass of ProbingAction that takes in an existing channel
+ * Subclass of {@link ProbingAction} that takes in an existing channel
  */
 @AutoValue
 public abstract class ExistingChannelAction extends ProbingAction {
@@ -34,6 +33,8 @@ public abstract class ExistingChannelAction extends ProbingAction {
 
   @Override
   public ChannelFuture call() {
+    //only thing necessary is reset the PROBING_ACTION_KEY of
+    //the channel to reflect the current PrrobingAction
     channel().attr(PROBING_ACTION_KEY).set(this);
     return super.call();
   }

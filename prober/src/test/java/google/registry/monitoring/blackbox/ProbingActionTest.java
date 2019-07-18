@@ -43,12 +43,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-/** Unit tests for {@link NewChannelAction}.
- * Attempts to test how well WebWhoIsActionHandler works
- * when responding to all possible types of responses
+/**
+ * Unit tests for {@link ProbingAction} subtypes
+ *
+ * <p>Attempts to test how well each {@link ProbingAction} works with an {@link ActionHandler}
+ * subtype when receiving to all possible types of responses</p>
  * */
 @RunWith(JUnit4.class)
 public class ProbingActionTest {
+  /** Necessary Constants for test */
   private final String TEST_MESSAGE = "MESSAGE_TEST";
   private final String SECONDARY_TEST_MESSAGE = "SECONDARY_MESSAGE_TEST";
   private final String PROTOCOL_NAME = "TEST_PROTOCOL";
@@ -61,6 +64,7 @@ public class ProbingActionTest {
     .group(eventLoopGroup)
     .channel(LocalChannel.class);
 
+  /** We use custom Test {@link ActionHandler} and {@link ConversionHandler} so test depends only on {@link ProbingAction} */
   private ActionHandler testHandler = new TestActionHandler();
   private ChannelHandler conversionHandler = new ConversionHandler();
 
@@ -72,11 +76,11 @@ public class ProbingActionTest {
   private EmbeddedChannel channel;
   private Protocol protocol;
 
-
-
+  /** Used for testing how well probing step can create connection to blackbox server */
   @Rule
   public NettyRule nettyRule = new NettyRule(eventLoopGroup);
 
+  /** Sets up a {@link Protocol} corresponding to when a new connection is created */
   private void setupNewChannelProtocol() {
     protocol = Protocol.builder()
         .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
@@ -85,6 +89,7 @@ public class ProbingActionTest {
         .persistentConnection(false)
         .build();
   }
+  /** Sets up a {@link Protocol} corresponding to when a new connection exists */
   private void setupExistingChannelProtocol() {
     protocol = Protocol.builder()
         .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
@@ -94,6 +99,7 @@ public class ProbingActionTest {
         .build();
   }
 
+  /** Sets up a {@link NewChannelAction} with test specified attributes */
   private void setupNewChannelAction() {
     newChannelAction = NewChannelAction.<LocalChannel>builder()
         .bootstrap(bootstrap)
@@ -109,6 +115,7 @@ public class ProbingActionTest {
     channel = new EmbeddedChannel();
   }
 
+  /** Sets up a {@link ExistingChannelAction} with test specified attributes */
   private void setupExistingChannelAction(Channel channel) {
     existingChannelAction = ExistingChannelAction.builder()
         .channel(channel)

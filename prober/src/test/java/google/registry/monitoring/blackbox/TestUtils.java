@@ -36,9 +36,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.concurrent.DefaultPromise;
 import javax.inject.Provider;
 import org.joda.time.Duration;
@@ -46,7 +43,7 @@ import org.joda.time.Duration;
 /** Utility class for various helper methods used in testing. */
 public class TestUtils {
 
-  public static FullHttpRequest makeHttpPostRequest(String content, String host, String path) {
+  static FullHttpRequest makeHttpPostRequest(String content, String host, String path) {
     ByteBuf buf = Unpooled.wrappedBuffer(content.getBytes(US_ASCII));
     FullHttpRequest request =
         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, path, buf);
@@ -106,44 +103,13 @@ public class TestUtils {
     return request;
   }
 
-  public static FullHttpRequest makeEppHttpRequest(
-      String content,
-      String host,
-      String path,
-      String accessToken,
-      String sslClientCertificateHash,
-      String clientAddress,
-      Cookie... cookies) {
-    FullHttpRequest request = makeHttpPostRequest(content, host, path);
-    request
-        .headers()
-        .set("authorization", "Bearer " + accessToken)
-        .set("content-type", "application/epp+xml")
-        .set("accept", "application/epp+xml")
-        .set("X-SSL-Certificate", sslClientCertificateHash)
-        .set("X-Forwarded-For", clientAddress);
-    if (cookies.length != 0) {
-      request.headers().set("cookie", ClientCookieEncoder.STRICT.encode(cookies));
-    }
-    return request;
-  }
-
   public static FullHttpResponse makeWhoisHttpResponse(String content, HttpResponseStatus status) {
     FullHttpResponse response = makeHttpResponse(content, status);
     response.headers().set("content-type", "text/plain");
     return response;
   }
 
-  public static FullHttpResponse makeEppHttpResponse(
-      String content, HttpResponseStatus status, Cookie... cookies) {
-    FullHttpResponse response = makeHttpResponse(content, status);
-    response.headers().set("content-type", "application/epp+xml");
-    for (Cookie cookie : cookies) {
-      response.headers().add("set-cookie", ServerCookieEncoder.STRICT.encode(cookie));
-    }
-    return response;
-  }
-
+  /** {@link Provider} test subtype for the purpose of easily adding requisite {@link ChannelHandler}s to pipeline */
   public static class TestProvider<E> implements Provider<E> {
 
     private E obj;
@@ -158,6 +124,7 @@ public class TestUtils {
     }
   }
 
+  /** {@link InboundMessageType} and {@link OutboundMessageType} type for the purpose of containing String messages to be passed down channel */
   public static class DuplexMessageTest implements OutboundMessageType, InboundMessageType {
 
     String message;
@@ -176,36 +143,24 @@ public class TestUtils {
     }
   }
 
-  /** Probing Step subclass that performs probing Steps functions, with time delay and minor exception handling */
+  /** {@link ProbingStep} subclass that performs probing Steps functions, without time delay */
   public static class TestStep extends ProbingStep<LocalChannel> {
 
-    private String testMessage;
-
     public TestStep(Protocol protocol, String testMessage, LocalAddress address) {
-      this.protocol = protocol;
-      this.testMessage = testMessage;
+      super(protocol, new DuplexMessageTest(testMessage));
       this.address = address;
       this.duration = Duration.ZERO;
     }
-    @Override
-    protected DuplexMessageTest message() {
-      return new DuplexMessageTest(testMessage);
-    }
-
   }
 
-  /** Probing Step subclass that is solely used to note when the previous Probing Step has completed its action */
+  /** {@link ProbingStep} subclass that is solely used to note when the previous {@link ProbingStep} has completed its action */
   public static class DummyStep extends ProbingStep<LocalChannel> {
     private DefaultPromise<Token> future;
 
     public DummyStep(Protocol protocol, EventLoopGroup eventLoopGroup) {
+      super(protocol, new DuplexMessageTest());
       future = new DefaultPromise<Token>(eventLoopGroup.next()) {};
       duration = Duration.ZERO;
-      this.protocol = protocol;
-    }
-    @Override
-    protected DuplexMessageTest message() {
-      return new DuplexMessageTest();
     }
 
     @Override
@@ -217,7 +172,7 @@ public class TestUtils {
     }
   }
 
-  /** Basic outline for Token Instances to be used in tests */
+  /** Basic outline for {@link Token} instances to be used in tests */
   private static abstract class TestToken extends Token {
     private String host;
 
@@ -240,7 +195,8 @@ public class TestUtils {
     }
 
   }
-  /** TestToken instance that creates new channel */
+
+  /** {@link TestToken} instance that creates new channel */
   public static class NewChannelToken extends TestToken {
     public NewChannelToken(String host) {
       super(host);
@@ -251,7 +207,7 @@ public class TestUtils {
     }
   }
 
-  /** Token instance that passes in existing channel */
+  /** {@link TestToken} instance that passes in existing channel */
   public static class ExistingChannelToken extends TestToken {
     private Channel channel;
 

@@ -17,6 +17,14 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 
+/**
+ * {@link TestServer} subtype that performs WebWhois Services Expected
+ *
+ * It will either redirect the client to the correct location if given the
+ * requisite redirect input, give the client a successful response if they give
+ * the expected final destination, or give the client an error message if given
+ * an unexpected host location
+ */
 public class WebWhoisServer extends TestServer {
 
   public WebWhoisServer(LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
@@ -27,6 +35,7 @@ public class WebWhoisServer extends TestServer {
     super(eventLoopGroup, localAddress, handlers);
   }
 
+  /** Creates server that doesn't deal with {@link ByteBuf} conversion and just sends the HttpRequestMessage object through pipeline */
   public static WebWhoisServer strippedServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, String redirectInput, String destinationInput) {
     return new WebWhoisServer(
         eventLoopGroup,
@@ -34,7 +43,7 @@ public class WebWhoisServer extends TestServer {
         ImmutableList.of(new RedirectHandler(redirectInput, destinationInput))
     );
   }
-
+  /** Creates server that sends exactly what we expect a remote server to send as a response, by sending the {@link ByteBuf} of the response through pipeline */
   public static WebWhoisServer fullServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, String redirectInput, String destinationInput) {
     return new WebWhoisServer(
         eventLoopGroup,
@@ -46,19 +55,27 @@ public class WebWhoisServer extends TestServer {
     );
   }
 
+  /**
+   * Handler that will wither redirect client, give successful response, or give error messge
+   */
   @Sharable
   static class RedirectHandler extends ChannelDuplexHandler {
     private String redirectInput;
     private String destinationInput;
 
+    /**
+     *
+     * @param redirectInput - Server will send back redirect to {@code destinationInput} when receiving a request with this host location
+     * @param destinationInput - Server will send back an {@link HttpResponseStatus.OK} response when receiving a request with this host location
+     */
     public RedirectHandler(String redirectInput, String destinationInput) {
       this.redirectInput = redirectInput;
       this.destinationInput = destinationInput;
     }
 
+    /** Reads input {@link HttpRequest}, and creates appropriate {@link HttpResponseMessage} based on what header location is */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-      System.out.println(msg);
       HttpRequest request = (HttpRequest) msg;
       HttpResponse response;
       if (request.headers().get("host").equals(redirectInput)) {

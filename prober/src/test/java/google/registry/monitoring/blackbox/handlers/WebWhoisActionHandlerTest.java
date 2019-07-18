@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.NewChannelAction;
 import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
-import google.registry.monitoring.blackbox.TestServers.TestServer;
 import google.registry.monitoring.blackbox.TestServers.WebWhoisServer;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
@@ -48,10 +47,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link WebWhoisActionHandler}.
- * Attempts to test how well WebWhoIsActionHandler works
- * when responding to all possible types of responses
- * */
+/**
+ * Unit tests for {@link WebWhoisActionHandler}.
+ *
+ * <p>Attempts to test how well {@link WebWhoisActionHandler} works
+ * when responding to all possible types of responses </p>
+ */
 @RunWith(JUnit4.class)
 public class WebWhoisActionHandlerTest {
   private static final int HTTP_PORT = 80;
@@ -70,7 +71,6 @@ public class WebWhoisActionHandlerTest {
   private ActionHandler actionHandler;
   private ProbingAction probingAction;
   private Provider<? extends ChannelHandler> actionHandlerProvider;
-  private TestServer server;
 
   private void generateLocalAddress() {
     address = new LocalAddress(ADDRESS_STRING + System.currentTimeMillis());
@@ -130,7 +130,7 @@ public class WebWhoisActionHandlerTest {
   }
 
   private void setupLocalServer(String redirectInput, String destinationInput, EventLoopGroup group) {
-    server = WebWhoisServer.strippedServer(group, address, redirectInput, destinationInput);
+    WebWhoisServer.strippedServer(group, address, redirectInput, destinationInput);
   }
 
   @Test

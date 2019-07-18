@@ -1,4 +1,4 @@
-// Copyright 2018 The Nomulus Authors. All Rights Reserved.
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,22 +25,21 @@ import io.netty.handler.codec.http.HttpVersion;
 import javax.inject.Inject;
 
 /**
- * Goal is to allow for easy creation of Message for {@link ProbingStep} from {@link Protocol}
- * input to constructor. Only for steps that are in WebWhoIs flow.
+ * {@link ProbingStep} subclass that deals with setps in the WebWhoisFlow
+ *
+ * @param <C> refer to {@code C} in {@link ProbingStep}
+ *
+ * <p>Only passes in requisite {@link Protocol} and {@link OutboundMessageType} to parent constructor</p>
  */
 public class ProbingStepWeb<C extends AbstractChannel> extends ProbingStep<C>{
-
   @Inject
   public ProbingStepWeb(Protocol protocol) {
-    this.protocol = protocol;
+    super(protocol, new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, ""));
     duration = DEFAULT_DURATION;
   }
 
   @Override
-  public HttpRequestMessage message() {
-      HttpRequestMessage request = new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, "");
-      return request;
+  Protocol protocol() {
+    return protocol;
   }
 }
-
-

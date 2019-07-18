@@ -1,4 +1,4 @@
-// Copyright 2018 The Nomulus Authors. All Rights Reserved.
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,9 +19,25 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.EventLoopGroup;
 
+/**
+ * Represents Sequence of {@link ProbingSteps} that the Prober performs in order
+ *
+ * @param <C> Primarily for testing purposes to specify channel type. Usually is {@link NioSocketChannel}
+ * but for tests is {@link LocalChannel}
+ *
+ * <p>Created with {@link Builder} where we specify {@link EventLoopGroup}, {@link AbstractChannel} class type,
+ * then sequentially add in the {@link ProbingStep}s in order and mark which one is the first repeated step.</p>
+ *
+ * <p>{@link ProbingSequence} implicitly points each {@link ProbingStep} to the next one, so once the first one
+ * is activated with the requisite {@link Token}, the {@link ProbingStep}s do the rest of the work</p>
+ */
 public class ProbingSequence<C extends AbstractChannel> {
   private ProbingStep<C> firstStep;
+
+  /** A given {@link Prober} will run each of its {@link ProbingSequence}s with the same given {@link EventLoopGroup} */
   private EventLoopGroup eventGroup;
+
+  /** Each {@link ProbingSequence} houses its own {@link Bootstrap} instance */
   private Bootstrap bootstrap;
 
   public Bootstrap getBootstrap() {
@@ -34,7 +50,9 @@ public class ProbingSequence<C extends AbstractChannel> {
   }
 
   /**
-   * Builder that sequentially adds steps
+   * {@link Builder} which takes in {@link ProbingStep}s
+   *
+   * @param <C> Same specified {@code C} for overall {@link ProbingSequence}
    */
   public static class Builder<C extends AbstractChannel> {
     private ProbingStep<C> currentStep;
@@ -54,15 +72,16 @@ public class ProbingSequence<C extends AbstractChannel> {
       } else {
         currentStep.nextStep(step);
       }
-
       currentStep = step;
       return this;
-
     }
+
+    /** We take special note of the first repeated step and set pointers in {@link ProbingStep}s appropriately */
     Builder<C> makeFirstRepeated() {
       firstSequenceStep = currentStep;
       return this;
     }
+    /** Set the class to be the same as {@code C} */
     public Builder<C> setClass(Class<C> classType) {
       this.classType = classType;
       return this;
@@ -76,6 +95,7 @@ public class ProbingSequence<C extends AbstractChannel> {
 
   }
 
+  /** We point each {@link ProbingStep} to the parent {@link ProbingSequence} so it can access its {@link Bootstrap} */
   private void setParents() {
     ProbingStep<C> currentStep = firstStep.parent(this).nextStep();
 
@@ -91,6 +111,12 @@ public class ProbingSequence<C extends AbstractChannel> {
         .group(eventGroup)
         .channel(classType);
     setParents();
+  }
+
+  @Override
+  public String toString() {
+    return String.format("ProbingSequence with EventLoopGroup: %s and Bootstrap %s", eventGroup, bootstrap);
+
   }
 }
 

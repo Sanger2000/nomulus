@@ -1,4 +1,4 @@
-// Copyright 2018 The Nomulus Authors. All Rights Reserved.
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,12 +18,16 @@ import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
 
-/** Superclass that represents information passed to each {@link ProbingStep}
- * for each loop in a {@link ProbingSequence}.
+/**
+ * Superclass that represents information passed to each {@link ProbingStep}
+ * a given loop in a {@link ProbingSequence}.
+ *
+ * <p>Should modify the message passed in to reflect the current host, should pass down
+ * a channel if a persistent connection exists in the sequence, and should be able to obtain
+ * the next Token when moving on to the next iteration of a loop in the sequence.</p>
  */
 public abstract class Token {
 
-  protected String localHostname;
   protected Channel channel;
 
   public abstract Token next();
@@ -37,9 +41,5 @@ public abstract class Token {
   public Channel channel() {
     return this.channel;
   }
-
-
-
-
 
 }

@@ -183,4 +183,19 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
       channelPipeline.addLast(handlerProvider.get());
     }
   }
+  @Override
+  public String toString() {
+    return String.format(
+        "ProbingAction with delay: %d\n" +
+            "outboundMessage: %s\n" +
+            "protocol: %s\n" +
+            "host: %s\n" +
+            "path: %s\n",
+        delay().getStandardSeconds(),
+        outboundMessage(),
+        protocol(),
+        host(),
+        path()
+    );
+  }
 }

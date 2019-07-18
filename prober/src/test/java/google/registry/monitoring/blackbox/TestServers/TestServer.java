@@ -19,20 +19,21 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+/**
+ * Mock Server Superclass whose subclasses implement specific behaviours we expect blackbox server to perform
+ */
 public abstract class TestServer {
-  protected EventLoopGroup eventLoopGroup;
-  protected LocalAddress localAddress;
-  protected ServerBootstrap serverBootstrap;
+  private LocalAddress localAddress;
 
-  protected TestServer(LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
+  TestServer(LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
     this(new NioEventLoopGroup(1), localAddress, handlers);
   }
 
-  protected TestServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
-    this.eventLoopGroup = eventLoopGroup;
+  TestServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
     this.localAddress = localAddress;
-    ChannelInitializer<LocalChannel> serverInitializer = new ChannelInitializer<LocalChannel>() {
 
+    //Creates ChannelInitializer with handlers specified
+    ChannelInitializer<LocalChannel> serverInitializer = new ChannelInitializer<LocalChannel>() {
       @Override
       protected void initChannel(LocalChannel ch) {
         for (ChannelHandler handler : handlers) {
@@ -40,9 +41,10 @@ public abstract class TestServer {
         }
       }
     };
-    serverBootstrap =
+    //Sets up serverBootstrap with specified initializer, eventLoopGroup, and using LocalServerChannel class
+    ServerBootstrap serverBootstrap =
         new ServerBootstrap()
-        .group(this.eventLoopGroup)
+        .group(eventLoopGroup)
         .channel(LocalServerChannel.class)
         .childHandler(serverInitializer);
 
