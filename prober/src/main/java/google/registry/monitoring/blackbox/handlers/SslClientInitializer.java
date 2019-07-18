@@ -57,7 +57,6 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
   private final Supplier<PrivateKey> privateKeySupplier;
   private final Supplier<X509Certificate[]> certificateSupplier;
 
-
   public SslClientInitializer(SslProvider sslProvider) {
     // null uses the system default trust store.
     //Used for WebWhois, so we don't care about privateKey and certificates, setting them to null
