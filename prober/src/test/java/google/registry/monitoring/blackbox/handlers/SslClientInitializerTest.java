@@ -15,15 +15,15 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
-import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
+import static google.registry.monitoring.blackbox.connection.ProbingAction.PROBING_ACTION_KEY;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.getKeyPair;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.setUpSslChannel;
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.signKeyPair;
 
 import com.google.common.collect.ImmutableList;
-import google.registry.monitoring.blackbox.ExistingChannelAction;
-import google.registry.monitoring.blackbox.ProbingAction;
-import google.registry.monitoring.blackbox.Protocol;
+import google.registry.monitoring.blackbox.connection.ExistingChannelAction;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.modules;
 
 import com.google.common.collect.ImmutableList;
 import dagger.Module;
@@ -20,9 +20,9 @@ import dagger.Provides;
 import dagger.multibindings.IntoSet;
 
 
-import google.registry.monitoring.blackbox.EppModule.EppProtocol;
-import google.registry.monitoring.blackbox.TokenModule.WebWhoIs;
-import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
+import google.registry.monitoring.blackbox.ProbingStep;
+import google.registry.monitoring.blackbox.ProbingStepWeb;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.MessageHandler;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
@@ -46,11 +46,11 @@ public class WebWhoisModule {
 
   /** Dagger qualifier to provide HTTP whois protocol related handlers and other bindings. */
   @Qualifier
-  @interface HttpWhoisProtocol {}
+  public @interface HttpWhoisProtocol {}
 
   /** Dagger qualifier to provide HTTPS whois protocol related handlers and other bindings. */
   @Qualifier
-  @interface HttpsWhoisProtocol {}
+  public @interface HttpsWhoisProtocol {}
 
   /** Dagger qualifier to provide any WebWhois related bindings. */
   @Qualifier

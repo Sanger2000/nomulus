@@ -15,15 +15,16 @@
 package google.registry.monitoring.blackbox;
 
 import com.google.common.flogger.FluentLogger;
-import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.exceptions.EppClientException;
+import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.monitoring.blackbox.connection.ExistingChannelAction;
+import google.registry.monitoring.blackbox.connection.NewChannelAction;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
-import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.local.LocalAddress;
-import java.io.IOException;
 import java.util.function.Consumer;
 import org.joda.time.Duration;
 

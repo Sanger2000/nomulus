@@ -1,10 +1,8 @@
-package google.registry.monitoring.blackbox.Tokens;
+package google.registry.monitoring.blackbox.tokens;
 
-import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
-import java.io.IOException;
 import javax.inject.Inject;
 
 public class EppToken extends Token {

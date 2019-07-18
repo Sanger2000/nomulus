@@ -12,25 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.modules;
 
 import com.google.common.collect.ImmutableList;
 import dagger.Module;
 import dagger.Provides;
 
 
+import google.registry.monitoring.blackbox.ProbingStep;
+import google.registry.monitoring.blackbox.ProbingStepWeb;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.EppActionHandler;
 import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
 import google.registry.monitoring.blackbox.handlers.MessageHandler;
-import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
-import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
 import google.registry.monitoring.blackbox.messages.EppResponseMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslProvider;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -52,6 +50,12 @@ public class EppModule {
    */
   @Qualifier
   public @interface EppProtocol {}
+
+  @Qualifier
+  @interface Login {}
+
+  @Qualifier
+  @interface Logout {}
 
 
   private static final String HTTP_PROTOCOL_NAME = "whois_http";

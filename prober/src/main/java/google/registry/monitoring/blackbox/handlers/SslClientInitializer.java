@@ -15,13 +15,13 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
+import static google.registry.monitoring.blackbox.connection.ProbingAction.PROBING_ACTION_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 
-import google.registry.monitoring.blackbox.ProbingAction;
-import google.registry.monitoring.blackbox.Protocol;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;

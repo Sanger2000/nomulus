@@ -16,7 +16,8 @@ package google.registry.monitoring.blackbox;
 
 import com.google.common.collect.ImmutableMap;
 import google.registry.monitoring.blackbox.ProberModule.ProberComponent;
-import google.registry.monitoring.blackbox.Tokens.Token;
+import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**

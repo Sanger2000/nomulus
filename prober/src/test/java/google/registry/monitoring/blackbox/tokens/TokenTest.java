@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.tokens;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.Tokens.WebWhoisToken;
+import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.monitoring.blackbox.tokens.WebWhoisToken;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import io.netty.handler.codec.http.HttpMethod;

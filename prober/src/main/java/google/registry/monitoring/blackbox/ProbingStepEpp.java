@@ -15,6 +15,7 @@
 package google.registry.monitoring.blackbox;
 
 import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import io.netty.channel.AbstractChannel;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,10 +29,10 @@ import javax.inject.Inject;
  *
  * <p>Only passes in requisite {@link Protocol} and {@link OutboundMessageType} to parent constructor</p>
  */
-public class ProbingStepWeb<C extends AbstractChannel> extends ProbingStep<C>{
+public class ProbingStepEpp<C extends AbstractChannel> extends ProbingStep<C>{
   @Inject
-  public ProbingStepWeb(Protocol protocol) {
-    super(protocol, new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, ""));
+  public ProbingStepEpp(Protocol protocol, EppRequestMessage message) {
+    super(protocol, message);
     duration = DEFAULT_DURATION;
   }
 }

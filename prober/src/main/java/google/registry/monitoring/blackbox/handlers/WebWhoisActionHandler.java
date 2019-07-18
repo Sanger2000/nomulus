@@ -14,12 +14,12 @@
 
 package google.registry.monitoring.blackbox.handlers;
 
-import static google.registry.monitoring.blackbox.ProbingAction.PROBING_ACTION_KEY;
+import static google.registry.monitoring.blackbox.connection.ProbingAction.PROBING_ACTION_KEY;
 
 import com.google.common.flogger.FluentLogger;
-import google.registry.monitoring.blackbox.ProbingAction;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.Prober;
-import google.registry.monitoring.blackbox.Protocol;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.exceptions.ResponseException;
 import google.registry.monitoring.blackbox.exceptions.ServerSideException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;

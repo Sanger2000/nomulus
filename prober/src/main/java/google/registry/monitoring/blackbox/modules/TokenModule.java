@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.modules;
 
 import dagger.Module;
 import dagger.Provides;
-import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.Tokens.WebWhoisToken;
-import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
-import javax.inject.Qualifier;
+import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.monitoring.blackbox.tokens.WebWhoisToken;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
 
 @Module
 public class TokenModule {
-
-  @Qualifier
-  public @interface WebWhoIs {}
 
   @Provides
   @WebWhoisProtocol

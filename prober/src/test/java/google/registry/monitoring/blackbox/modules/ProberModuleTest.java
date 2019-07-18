@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.modules;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -24,7 +24,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import google.registry.monitoring.blackbox.WebWhoisModule.HttpWhoisProtocol;
+import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.modules.TokenModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpWhoisProtocol;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 

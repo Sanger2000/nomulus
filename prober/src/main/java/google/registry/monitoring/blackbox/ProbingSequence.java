@@ -14,7 +14,7 @@
 
 package google.registry.monitoring.blackbox;
 
-import google.registry.monitoring.blackbox.Tokens.Token;
+import google.registry.monitoring.blackbox.tokens.Token;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.EventLoopGroup;
@@ -61,12 +61,12 @@ public class ProbingSequence<C extends AbstractChannel> {
     private EventLoopGroup eventLoopGroup;
     private Class<C> classType;
 
-    Builder<C> eventLoopGroup(EventLoopGroup eventLoopGroup) {
+    public Builder<C> eventLoopGroup(EventLoopGroup eventLoopGroup) {
       this.eventLoopGroup = eventLoopGroup;
       return this;
     }
 
-    Builder<C> addStep(ProbingStep<C> step) {
+    public Builder<C> addStep(ProbingStep<C> step) {
       if (currentStep == null) {
         firstStep = step;
       } else {
@@ -77,7 +77,7 @@ public class ProbingSequence<C extends AbstractChannel> {
     }
 
     /** We take special note of the first repeated step and set pointers in {@link ProbingStep}s appropriately */
-    Builder<C> makeFirstRepeated() {
+    public Builder<C> makeFirstRepeated() {
       firstSequenceStep = currentStep;
       return this;
     }

@@ -19,10 +19,15 @@ import com.google.common.collect.Maps;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import google.registry.monitoring.blackbox.Tokens.Token;
-import google.registry.monitoring.blackbox.WebWhoisModule.HttpWhoisProtocol;
-import google.registry.monitoring.blackbox.WebWhoisModule.HttpsWhoisProtocol;
-import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
+import google.registry.monitoring.blackbox.modules.EppModule.EppProtocol;
+import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.modules.EppModule;
+import google.registry.monitoring.blackbox.modules.TokenModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpWhoisProtocol;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpsWhoisProtocol;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -72,6 +77,18 @@ public class ProberModule {
   }
 
   @Provides
+  @EppProtocol
+  ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence(
+      @HttpsWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+      EventLoopGroup eventLoopGroup) {
+    return new ProbingSequence.Builder<NioSocketChannel>()
+        .setClass(NioSocketChannel.class)
+        .addStep(probingStep)
+        .makeFirstRepeated()
+        .eventLoopGroup(eventLoopGroup)
+        .build();
+  }
+  @Provides
   @HttpWhoisProtocol
   int provideHttpWhoisPort() {
     return httpWhoIsPort;
@@ -101,13 +118,16 @@ public class ProberModule {
       })
   public interface ProberComponent {
 
-    @HttpWhoisProtocol ProbingSequence<NioSocketChannel> provideHttpWhoisSequence();
+    @HttpWhoisProtocol
+    public ProbingSequence<NioSocketChannel> provideHttpWhoisSequence();
 
-    @HttpsWhoisProtocol ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence();
+    @HttpsWhoisProtocol
+    public ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence();
 
-    ImmutableMap<Integer, Protocol> providePortToProtocolMap();
+    public ImmutableMap<Integer, Protocol> providePortToProtocolMap();
 
-    @WebWhoisProtocol Token provideWebWhoisToken();
+    @WebWhoisProtocol
+    public Token provideWebWhoisToken();
 
   }
 }
