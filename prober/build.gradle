@@ -19,6 +19,9 @@ createUberJar('deployJar', 'prober', 'google.registry.monitoring.blackbox.Prober
 dependencies {
     def deps = rootProject.dependencyMap
 
+    compile deps['com.beust:jcommander']
+    compile deps['com.google.apis:google-api-services-cloudkms']
+    compile deps['com.google.apis:google-api-services-storage']
     compile deps['com.google.auto.value:auto-value-annotations']
     compile deps['com.google.dagger:dagger']
     compile deps['com.google.flogger:flogger']

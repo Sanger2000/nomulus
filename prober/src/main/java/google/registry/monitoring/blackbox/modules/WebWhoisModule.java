@@ -18,8 +18,6 @@ import com.google.common.collect.ImmutableList;
 import dagger.Module;
 import dagger.Provides;
 import dagger.multibindings.IntoSet;
-
-
 import google.registry.monitoring.blackbox.ProbingStep;
 import google.registry.monitoring.blackbox.ProbingStepWeb;
 import google.registry.monitoring.blackbox.connection.Protocol;
@@ -199,6 +197,4 @@ public class WebWhoisModule {
   static SslClientInitializer<NioSocketChannel> provideSslClientInitializer(SslProvider sslProvider) {
     return new SslClientInitializer<>(sslProvider);
   }
-
-
 }
