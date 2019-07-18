@@ -27,6 +27,7 @@ import google.registry.monitoring.blackbox.ProbingAction;
 import google.registry.monitoring.blackbox.Protocol;
 import google.registry.monitoring.blackbox.TestServers.WebWhoisServer;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
+import google.registry.monitoring.blackbox.handlers.ActionHandler.ResponseType;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
 import io.netty.bootstrap.Bootstrap;
@@ -161,6 +162,7 @@ public class WebWhoisActionHandlerTest {
 
     //assesses that we successfully received good response and protocol is unchanged
     assertThat(future.isSuccess()).isTrue();
+    assertThat(actionHandler.getStatus()).isEqualTo(ResponseType.SUCCESS);
     assertThat(channel.attr(PROBING_ACTION_KEY).get()).isEqualTo(probingAction);
   }
 
@@ -190,8 +192,8 @@ public class WebWhoisActionHandlerTest {
     channel.writeInbound(response);
 
     //assesses that listener is triggered, but event is not success
-    assertThat(testPromise.isSuccess()).isTrue();
     assertThat(future.isSuccess()).isTrue();
+    assertThat(actionHandler.getStatus()).isEqualTo(ResponseType.FAILURE);
 
     //ensures Protocol is the same
     assertThat(channel.attr(PROBING_ACTION_KEY).get()).isEqualTo(probingAction);
@@ -220,9 +222,10 @@ public class WebWhoisActionHandlerTest {
 
       channel.writeInbound(response);
 
-      //assesses that listener is triggered, and event is success
-      assertThat(testPromise.isSuccess()).isTrue();
+      //assesses that listener is triggered, and event is not success
       assertThat(future.isSuccess()).isTrue();
+      assertThat(actionHandler.getStatus()).isEqualTo(ResponseType.FAILURE);
+
       //ensures Protocol is the same
       assertThat(channel.attr(PROBING_ACTION_KEY).get()).isEqualTo(probingAction);
   }
@@ -302,6 +305,7 @@ public class WebWhoisActionHandlerTest {
 
     //assesses that we successfully received good response and protocol is unchanged
     assertThat(future.syncUninterruptibly().isSuccess()).isTrue();
+    assertThat(actionHandler.getStatus()).isEqualTo(ResponseType.SUCCESS);
   }
 
   @Test
@@ -320,6 +324,7 @@ public class WebWhoisActionHandlerTest {
 
     //assesses that we successfully received good response and protocol is unchanged
     assertThat(future.syncUninterruptibly().isSuccess()).isTrue();
+    assertThat(actionHandler.getStatus()).isEqualTo(ResponseType.FAILURE);
   }
 
 }

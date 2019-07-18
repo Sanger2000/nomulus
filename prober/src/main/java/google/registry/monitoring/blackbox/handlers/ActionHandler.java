@@ -14,11 +14,11 @@
 
 package google.registry.monitoring.blackbox.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.exceptions.ResponseException;
 import google.registry.monitoring.blackbox.exceptions.ServerSideException;
-import google.registry.monitoring.blackbox.messages.EppResponseMessage.ResponseType;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -41,6 +41,11 @@ import io.netty.channel.ChannelPromise;
 public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundMessageType> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Three types of responses received down pipeline */
+  public enum ResponseType {SUCCESS, FAILURE, ERROR}
+
+  /** Status of response for current {@link ActionHandler} instance */
   private static ResponseType status;
 
   protected ChannelPromise finished;
@@ -93,6 +98,11 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
     //due to failure, close channel
     ChannelFuture closedFuture = ctx.channel().close();
     closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
+  }
+
+  @VisibleForTesting
+  ResponseType getStatus() {
+    return status;
   }
 }
 
