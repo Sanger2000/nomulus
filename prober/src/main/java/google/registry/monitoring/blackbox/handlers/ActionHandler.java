@@ -77,7 +77,6 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().toString(),
         ctx.channel().pipeline().toString()));
 
-
     if (ResponseException.class.isInstance(cause)) {
       //TODO - add in metrics handling to inform MetricsCollector the status of the task was a FAILURE
       status = ResponseType.FAILURE;
