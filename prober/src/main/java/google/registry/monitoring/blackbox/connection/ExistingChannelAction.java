@@ -33,8 +33,10 @@ public abstract class ExistingChannelAction extends ProbingAction {
 
   @Override
   public ChannelFuture call() {
+    //if (SslClientInitializer.class.isInstance(channel().pipeline().first()))
+      //channel().pipeline().removeFirst();
     //only thing necessary is reset the PROBING_ACTION_KEY of
-    //the channel to reflect the current PrrobingAction
+    //the channel to reflect the current ProbingAction
     channel().attr(PROBING_ACTION_KEY).set(this);
     return super.call();
   }

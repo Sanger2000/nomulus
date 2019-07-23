@@ -17,36 +17,26 @@ package google.registry.monitoring.blackbox.modules;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Suppliers.memoizeWithExpiration;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static google.registry.util.ResourceUtils.readResourceStream;
+import static google.registry.util.ResourceUtils.readResourceUtf8;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
-import dagger.Lazy;
+import com.google.common.flogger.FluentLogger;
 import dagger.Module;
 import dagger.Provides;
-import google.registry.monitoring.blackbox.ProberConfig;
-import google.registry.monitoring.blackbox.ProberConfig.Environment;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import java.io.ByteArrayInputStream;
+import google.registry.monitoring.blackbox.messages.EppMessage;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.Security;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import javax.inject.Named;
 import javax.inject.Provider;
-import javax.inject.Qualifier;
 import javax.inject.Singleton;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMException;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 /**
  * Dagger module that provides bindings needed to inject server certificate chain and private key.
@@ -65,180 +55,51 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 @Module
 public class CertificateModule {
 
-  /** Dagger qualifier to provide bindings related to the certificates that the server provides. */
-  @Qualifier
-  private @interface ServerCertificates {}
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** Dagger qualifier to provide bindings when running locally. */
-  @Qualifier
-  private @interface Local {}
-
-  /**
-   * Dagger qualifier to provide bindings when running in production.
-   *
-   * <p>The "production" here means that the proxy runs on GKE, as apposed to on a local machine. It
-   * does not necessary mean the production environment.
-   */
-  @Qualifier
-  @interface Prod {}
-
-  static {
-    Security.addProvider(new BouncyCastleProvider());
-  }
-
-  /**
-   * Select specific type from a given {@link ImmutableList} and convert them using the converter.
-   *
-   * @param objects the {@link ImmutableList} to filter from.
-   * @param clazz the class to filter.
-   * @param converter the converter function to act on the items in the filtered list.
-   */
-  private static <T, E> ImmutableList<E> filterAndConvert(
-      ImmutableList<Object> objects, Class<T> clazz, Function<T, E> converter) {
-    return objects
-        .stream()
-        .filter(clazz::isInstance)
-        .map(clazz::cast)
-        .map(converter)
-        .collect(toImmutableList());
+  private static InputStream readResource(String filename)
+      throws IOException {
+    return readResourceStream(CertificateModule.class, filename);
   }
 
   @Singleton
   @Provides
-  static Supplier<PrivateKey> providePrivateKeySupplier(
-      @ServerCertificates Provider<PrivateKey> privateKeyProvider, ProberConfig config) {
-    return memoizeWithExpiration(
-        privateKeyProvider::get, config.serverCertificateCacheSeconds, SECONDS);
+  @Named("key-store")
+  static String keystorePasswordProvider() {
+    return readResourceUtf8(CertificateModule.class, "secrets/keystore_password.txt");
   }
+
 
   @Singleton
   @Provides
-  static Supplier<X509Certificate[]> provideCertificatesSupplier(
-      @ServerCertificates Provider<X509Certificate[]> certificatesProvider, ProberConfig config) {
-    return memoizeWithExpiration(
-        certificatesProvider::get, config.serverCertificateCacheSeconds, SECONDS);
-  }
-
-  @Provides
-  @ServerCertificates
-  static X509Certificate[] provideCertificates(
-      Environment env,
-      @Local Lazy<X509Certificate[]> localCertificates,
-      @Prod Lazy<X509Certificate[]> prodCertificates) {
-    return (env == Environment.LOCAL) ? localCertificates.get() : prodCertificates.get();
-  }
-
-  @Provides
-  @ServerCertificates
-  static PrivateKey providePrivateKey(
-      Environment env,
-      @Local Lazy<PrivateKey> localPrivateKey,
-      @Prod Lazy<PrivateKey> prodPrivateKey) {
-    return (env == Environment.LOCAL) ? localPrivateKey.get() : prodPrivateKey.get();
-  }
-
-  @Singleton
-  @Provides
-  static SelfSignedCertificate provideSelfSignedCertificate() {
+  static PrivateKey providePrivateKey(@Named("key-store") Provider<String> passwordProvider) {
     try {
-      return new SelfSignedCertificate();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+      InputStream inStream = readResource("secrets/prober-client-tls-sandbox.p12");
+
+      KeyStore ks = KeyStore.getInstance("PKCS12");
+      ks.load(inStream, passwordProvider.get().toCharArray());
+
+      String alias = ks.aliases().nextElement();
+      return (PrivateKey) ks.getKey(alias, "passphrase".toCharArray());
+    } catch(IOException | GeneralSecurityException e) {
+      return null;
     }
   }
 
   @Singleton
   @Provides
-  @Local
-  static PrivateKey provideLocalPrivateKey(SelfSignedCertificate ssc) {
-    return ssc.key();
-  }
+  static X509Certificate[] provideCertificates(@Named("key-store") Provider<String> passwordProvider) {
+    try {
+      InputStream inStream = readResource("secrets/prober-client-tls-sandbox.p12");
 
-  @Singleton
-  @Provides
-  @Local
-  static X509Certificate[] provideLocalCertificates(SelfSignedCertificate ssc) {
-    return new X509Certificate[] {ssc.cert()};
-  }
+      KeyStore ks = KeyStore.getInstance("PKCS12");
+      ks.load(inStream, passwordProvider.get().toCharArray());
 
-  @Provides
-  @Named("pemObjects")
-  static ImmutableList<Object> providePemObjects(@Named("pemBytes") byte[] pemBytes) {
-    PEMParser pemParser =
-        new PEMParser(new InputStreamReader(new ByteArrayInputStream(pemBytes), UTF_8));
-    ImmutableList.Builder<Object> listBuilder = new ImmutableList.Builder<>();
-    Object obj;
-    // PEMParser returns an object (private key, certificate, etc) each time readObject() is called,
-    // until no more object is to be read from the file.
-    while (true) {
-      try {
-        obj = pemParser.readObject();
-        if (obj == null) {
-          break;
-        } else {
-          listBuilder.add(obj);
-        }
-      } catch (IOException e) {
-        throw new RuntimeException("Cannot parse PEM file correctly.", e);
-      }
+      String alias = ks.aliases().nextElement();
+      return new X509Certificate[] {(X509Certificate) ks.getCertificate(alias)};
+    } catch(Exception e) {
+      logger.atWarning().withCause(e).log();
+      return null;
     }
-    return listBuilder.build();
-  }
-
-  // This binding should not be used directly. Use the supplier binding instead.
-  @Provides
-  @Prod
-  static PrivateKey provideProdPrivateKey(@Named("pemObjects") ImmutableList<Object> pemObjects) {
-    JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-    Function<PEMKeyPair, PrivateKey> privateKeyConverter =
-        pemKeyPair -> {
-          try {
-            return converter.getKeyPair(pemKeyPair).getPrivate();
-          } catch (PEMException e) {
-            throw new RuntimeException(
-                String.format("Error converting private key: %s", pemKeyPair), e);
-          }
-        };
-    ImmutableList<PrivateKey> privateKeys =
-        filterAndConvert(pemObjects, PEMKeyPair.class, privateKeyConverter);
-    checkState(
-        privateKeys.size() == 1,
-        "The pem file must contain exactly one private key, but %s keys are found",
-        privateKeys.size());
-    return privateKeys.get(0);
-  }
-
-  // This binding should not be used directly. Use the supplier binding instead.
-  @Provides
-  @Prod
-  static X509Certificate[] provideProdCertificates(
-      @Named("pemObjects") ImmutableList<Object> pemObject) {
-    JcaX509CertificateConverter converter = new JcaX509CertificateConverter().setProvider("BC");
-    Function<X509CertificateHolder, X509Certificate> certificateConverter =
-        certificateHolder -> {
-          try {
-            return converter.getCertificate(certificateHolder);
-          } catch (CertificateException e) {
-            throw new RuntimeException(
-                String.format("Error converting certificate: %s", certificateHolder), e);
-          }
-        };
-    ImmutableList<X509Certificate> certificates =
-        filterAndConvert(pemObject, X509CertificateHolder.class, certificateConverter);
-    checkState(certificates.size() != 0, "No certificates found in the pem file");
-    X509Certificate lastCert = null;
-    for (X509Certificate cert : certificates) {
-      if (lastCert != null) {
-        checkState(
-            lastCert.getIssuerX500Principal().equals(cert.getSubjectX500Principal()),
-            "Certificate chain error:\n%s\nis not signed by\n%s",
-            lastCert,
-            cert);
-      }
-      lastCert = cert;
-    }
-    X509Certificate[] certificateArray = new X509Certificate[certificates.size()];
-    certificates.toArray(certificateArray);
-    return certificateArray;
   }
 }

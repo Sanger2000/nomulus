@@ -17,13 +17,13 @@ package google.registry.monitoring.blackbox.exceptions;
 /**
  * Base exception class for all instances when the Status of the task performed is ERROR
  */
-public class ServerSideException extends Exception {
+public class ConnectionException extends Exception {
 
-  public ServerSideException(String msg) {
+  public ConnectionException(String msg) {
     super(msg);
   }
 
-  public ServerSideException(Throwable e) {
+  public ConnectionException(Throwable e) {
     super(e);
   }
 }

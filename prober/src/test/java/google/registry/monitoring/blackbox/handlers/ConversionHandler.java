@@ -35,19 +35,18 @@ public class ConversionHandler extends ChannelDuplexHandler {
 
   /** Handles inbound conversion */
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+  public void channelRead(ChannelHandlerContext ctx, Object msg) {
     ByteBuf buf = (ByteBuf) msg;
-    super.channelRead(ctx, new DuplexMessageTest(buf.toString(UTF_8)));
+    ctx.fireChannelRead(new DuplexMessageTest(buf.toString(UTF_8)));
     buf.release();
   }
 
   /** Handles outbound conversion */
   @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-      throws Exception {
+  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     String message = msg.toString();
     ByteBuf buf = Unpooled.wrappedBuffer(message.getBytes(US_ASCII));
-    super.write(ctx, buf, promise);
+    ctx.write(buf, promise);
   }
 }
 

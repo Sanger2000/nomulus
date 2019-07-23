@@ -15,24 +15,28 @@
 package google.registry.monitoring.blackbox.modules;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import dagger.Module;
 import dagger.Provides;
 
+import static google.registry.util.ResourceUtils.readResourceUtf8;
 
 import google.registry.monitoring.blackbox.ProbingStep;
-import google.registry.monitoring.blackbox.ProbingStepWeb;
+import google.registry.monitoring.blackbox.ProbingStepEpp;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.EppActionHandler;
 import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
 import google.registry.monitoring.blackbox.handlers.MessageHandler;
+import google.registry.monitoring.blackbox.handlers.MetricsHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
-import google.registry.monitoring.blackbox.messages.EppResponseMessage;
+import google.registry.monitoring.blackbox.handlers.TimerHandler;
+import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslProvider;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.function.Supplier;
+import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Qualifier;
 import javax.inject.Singleton;
@@ -41,7 +45,8 @@ import javax.inject.Singleton;
 @Module
 public class EppModule {
 
-  final static String DOMAIN_SUFFIX = "whois.nic.";
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final String EPP_PROTOCOL_NAME = "epp";
 
 
@@ -51,23 +56,46 @@ public class EppModule {
   @Qualifier
   public @interface EppProtocol {}
 
-  @Qualifier
-  @interface Login {}
-
-  @Qualifier
-  @interface Logout {}
-
-
-  private static final String HTTP_PROTOCOL_NAME = "whois_http";
-  private static final String HTTPS_PROTOCOL_NAME = "whois_https";
-
+  @Provides
+  @Named("Hello")
+  static ProbingStep<NioSocketChannel> provideEppHelloStep(
+      @EppProtocol Protocol eppProtocol,
+      EppRequestMessage.HELLO helloRequest) {
+    return new ProbingStepEpp<>(eppProtocol, helloRequest);
+  }
 
   @Provides
-  @EppProtocol
-  static ProbingStep<NioSocketChannel> provideEppProbingStep(
-      @EppProtocol Protocol eppProtocol) {
-    return new ProbingStepWeb<>(eppProtocol);
+  @Named("Login")
+  static ProbingStep<NioSocketChannel> provideEppLoginStep(
+      @EppProtocol Protocol eppProtocol,
+      EppRequestMessage.LOGIN loginRequest) {
+    return new ProbingStepEpp<>(eppProtocol, loginRequest);
   }
+
+  @Provides
+  @Named("Create")
+  static ProbingStep<NioSocketChannel> provideEppCreateStep(
+      @EppProtocol Protocol eppProtocol,
+      EppRequestMessage.CREATE createRequest) {
+    return new ProbingStepEpp<>(eppProtocol, createRequest);
+  }
+
+  @Provides
+  @Named("Delete")
+  static ProbingStep<NioSocketChannel> provideEppDeleteStep(
+      @EppProtocol Protocol eppProtocol,
+      EppRequestMessage.DELETE deleteRequest) {
+    return new ProbingStepEpp<>(eppProtocol, deleteRequest);
+  }
+
+  @Provides
+  @Named("Logout")
+  static ProbingStep<NioSocketChannel> provideEppLogoutStep(
+      @EppProtocol Protocol eppProtocol,
+      EppRequestMessage.LOGOUT logoutRequest) {
+    return new ProbingStepEpp<>(eppProtocol, logoutRequest);
+  }
+
 
 
   @Singleton
@@ -84,40 +112,70 @@ public class EppModule {
         .build();
   }
 
-
-  @Provides
-  @EppProtocol
-  String provideEppHost() {
-    return DOMAIN_SUFFIX;
-  }
-
-
   @Provides
   @EppProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> provideEppHandlerProviders(
+      Provider<TimerHandler> timerHandlerProvider,
       @EppProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
       @EppProtocol Provider<MessageHandler> messageHandlerProvider,
-      Provider<EppActionHandler> eppActionHandlerProvider) {
+      Provider<EppActionHandler> eppActionHandlerProvider,
+      Provider<MetricsHandler> metricsHandlerProvider) {
     return ImmutableList.of(
+        timerHandlerProvider,
         sslClientInitializerProvider,
         messageHandlerProvider,
-        eppActionHandlerProvider);
+        eppActionHandlerProvider,
+        metricsHandlerProvider);
   }
+
 
 
   @Provides
   @EppProtocol
   static MessageHandler provideMessageHandler() {
-    return new EppMessageHandler(new EppResponseMessage.Success());
+    return new EppMessageHandler();
   }
 
   @Provides
   @EppProtocol
   static SslClientInitializer<NioSocketChannel> provideSslClientInitializer(
       SslProvider sslProvider,
-      Supplier<PrivateKey> privateKeySupplier,
-      Supplier<X509Certificate[]> certificatesSupplier) {
+      Provider<PrivateKey> privateKeyProvider,
+      Provider<X509Certificate[]> certificatesProvider) {
 
-    return new SslClientInitializer<>(sslProvider, privateKeySupplier, certificatesSupplier);
+    return new SslClientInitializer<>(sslProvider, privateKeyProvider, certificatesProvider);
+  }
+
+  /**
+   * epp_server_list = ["epp.registry-sandbox.google"]
+   *     whois_server_list = ["whois.registry-sandbox.google"]
+   *     epp_tld_list = ["%cell%-any.test"]
+   *     epp_client_id_list = ["prober-%cell%-any"]
+   */
+
+
+
+  @Provides
+  @Named("epp_user_id")
+  static String provideEppUserId() {
+    return readResourceUtf8(EppModule.class, "secrets/user_id.txt");
+  }
+
+  @Provides
+  @Named("epp_password")
+  static String provideEppPassphrase() {
+    return readResourceUtf8(EppModule.class, "secrets/password.txt");
+  }
+
+  @Provides
+  @Named("Epp-Host")
+  static String provideEppHost() {
+    return readResourceUtf8(EppModule.class, "secrets/epp_host.txt");
+  }
+
+  @Provides
+  @Named("Epp-Tld")
+  static String provideTld() {
+    return "oa-0.test";
   }
 }

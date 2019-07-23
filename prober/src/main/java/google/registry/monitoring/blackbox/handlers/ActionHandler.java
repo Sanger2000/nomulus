@@ -16,9 +16,9 @@ package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import google.registry.monitoring.blackbox.exceptions.ConnectionException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.exceptions.ResponseException;
-import google.registry.monitoring.blackbox.exceptions.ServerSideException;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -62,11 +62,19 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
     finished = ctx.newPromise();
   }
 
+  public void resetFuture() {
+    finished = finished.channel().newPromise();
+  }
+
   @Override
   public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage) throws ResponseException {
     //simply marks finished as success
     status = ResponseType.SUCCESS;
-    finished.setSuccess();
+    ctx.fireChannelRead(status);
+
+    if (!finished.isSuccess()) {
+      finished.setSuccess();
+    }
   }
 
   /** Logs the channel and pipeline that caused error, closes channel, then informs {@link ProbingAction} listeners of error */
@@ -78,27 +86,62 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().pipeline().toString()));
 
     if (ResponseException.class.isInstance(cause)) {
-      //TODO - add in metrics handling to inform MetricsCollector the status of the task was a FAILURE
+      //On ResponseException, we know the response is a failure. As a result,
+      //we set the status to FAILURE, then inform the MetricsHandler of this
       status = ResponseType.FAILURE;
+      ctx.fireChannelRead(status);
+
+      //Since it wasn't a success, we still want to log to see what caused the FAILURE
       logger.atInfo().log(cause.getMessage());
+
+      //As always, inform the ProbingStep that we successfully completed this action
       finished.setSuccess();
-    } else if (ServerSideException.class.isInstance(cause)) {
-      //TODO - add in metrics handling to inform MetricsCollector the status of the task was an ERROR
+
+    } else if (ConnectionException.class.isInstance(cause)) {
+      //On ConnectionException, we know the response type is an error. As a result,
+      //we set the status to ERROR, then inform the MetricsHandler of this
       status = ResponseType.ERROR;
+      ctx.fireChannelRead(status);
+
+      //Since it wasn't a success, we still log what caused the ERROR
       logger.atInfo().log(cause.getMessage());
       finished.setSuccess();
+
+      //As this was an ERROR in the connection, we must close the channel
+      ChannelFuture closedFuture = ctx.channel().close();
+      closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
+
     } else if (InternalException.class.isInstance(cause)){
+      //For an internal error, metrics should not be collected, so we log what caused this, and
+      //inform the ProbingStep the Prober had an internal error on this action
       logger.atSevere().withCause(cause).log("Severe internal error");
       finished.setFailure(cause);
+
+      //Discard reference to this channel in the shared TimerHandler
+      ((TimerHandler) ctx.channel().pipeline().first()).getLatency(ctx.channel());
+
+      //As this was an internal error, we must close the channel
+      ChannelFuture closedFuture = ctx.channel().close();
+      closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
+
     } else {
-      finished.setFailure(cause);
+      //In the case of any other kind of error, we assume it is some type of connection ERROR,
+      //so we treat it as such:
+
+      status = ResponseType.ERROR;
+      ctx.fireChannelRead(status);
+      logger.atInfo().log(cause.getMessage());
+      finished.setSuccess();
+
+      ChannelFuture closedFuture = ctx.channel().close();
+      closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
     }
 
-    //due to failure, close channel
-    ChannelFuture closedFuture = ctx.channel().close();
-    closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
+
+
   }
 
+  /**Only exists for testing purposes to see if {@link ActionHandler} displays the expected status's from responses/ */
   @VisibleForTesting
   ResponseType getStatus() {
     return status;

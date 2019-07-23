@@ -21,12 +21,11 @@ import google.registry.monitoring.blackbox.exceptions.ResponseException;
 import io.netty.buffer.ByteBuf;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
 import org.w3c.dom.Document;
 
 public abstract class EppResponseMessage extends EppMessage implements InboundMessageType{
   protected String clTRID;
-
-  public enum ResponseType {SUCCESS, FAILURE, ERROR}
 
   public abstract void getDocument(String clTRID, ByteBuf buf) throws ResponseException;
 
@@ -42,7 +41,10 @@ public abstract class EppResponseMessage extends EppMessage implements InboundMe
   public abstract void decode() throws ResponseException;
 
   public static class Success extends EppResponseMessage {
+    @Inject
+    public Success() {}
 
+    @Override
     public void getDocument(String clTRID, ByteBuf buf) throws ResponseException {
       this.clTRID = clTRID;
       super.getDocument(buf);
@@ -61,6 +63,9 @@ public abstract class EppResponseMessage extends EppMessage implements InboundMe
   }
 
   public static class Failure extends EppResponseMessage {
+    @Inject
+    public Failure() {}
+
     public void getDocument(String clTRID, ByteBuf buf) throws ResponseException {
       this.clTRID = clTRID;
       super.getDocument(buf);
@@ -73,6 +78,23 @@ public abstract class EppResponseMessage extends EppMessage implements InboundMe
           ImmutableList.of(
               String.format("//eppns:clTRID[.='%s']", clTRID),
               XFAIL_EXPRESSION),
+          true);
+    }
+  }
+  public static class Greeting extends EppResponseMessage {
+    @Inject
+    public Greeting() {}
+
+    @Override
+    public void getDocument(String clTRID, ByteBuf buf) throws ResponseException {
+      super.getDocument(buf);
+    }
+
+    @Override
+    public void decode() throws ResponseException {
+      verifyEppResponse(
+          message,
+          ImmutableList.of(),
           true);
     }
 

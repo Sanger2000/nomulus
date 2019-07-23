@@ -32,15 +32,14 @@ public class Prober {
   public static final ImmutableMap<Integer, Protocol> portToProtocolMap = proberComponent.providePortToProtocolMap();
 
 
+
   public static void main(String[] args) {
 
-    ProbingSequence<NioSocketChannel> httpsSequence = proberComponent.provideHttpsWhoisSequence();
-    Token httpsToken = proberComponent.provideWebWhoisToken();
+    ProbingSequence<NioSocketChannel> eppSequence = proberComponent.provideComplexEppSequence();
+    Token eppToken = proberComponent.provideTransientEppToken();
+    eppSequence.start(eppToken);
 
-    ProbingSequence<NioSocketChannel> httpSequence = proberComponent.provideHttpWhoisSequence();
-    Token httpToken = proberComponent.provideWebWhoisToken();
-    httpsSequence.start(httpsToken);
-    httpSequence.start(httpToken);
+
   }
 }
 

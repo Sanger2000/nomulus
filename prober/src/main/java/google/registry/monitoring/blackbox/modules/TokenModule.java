@@ -16,17 +16,32 @@ package google.registry.monitoring.blackbox.modules;
 
 import dagger.Module;
 import dagger.Provides;
+import google.registry.monitoring.blackbox.modules.EppModule.EppProtocol;
+import google.registry.monitoring.blackbox.tokens.EppToken;
 import google.registry.monitoring.blackbox.tokens.Token;
 import google.registry.monitoring.blackbox.tokens.WebWhoisToken;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
+import javax.inject.Named;
 
 @Module
 public class TokenModule {
 
   @Provides
   @WebWhoisProtocol
-  static Token provideToken(@WebWhoisProtocol String domainName) {
+  static Token provideWebToken(@WebWhoisProtocol String domainName) {
     return new WebWhoisToken(domainName);
+  }
+
+  @Provides
+  @Named("Transient")
+  static Token provideTransientEppToken(@Named("Epp-Tld") String tld, @Named("Epp-Host") String host) {
+    return new EppToken.Transient(tld, host);
+  }
+
+  @Provides
+  @Named("Persistent")
+  static Token providePersistentEppToken(@Named("Epp-Tld") String tld, @Named("Epp-Host") String host) {
+    return new EppToken.Persistent(tld, host);
   }
 
 

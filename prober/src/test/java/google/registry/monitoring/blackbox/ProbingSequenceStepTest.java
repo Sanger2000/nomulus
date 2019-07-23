@@ -167,7 +167,7 @@ public class ProbingSequenceStepTest {
     assertThat(firstStep.nextStep()).isEqualTo(dummyStep);
     assertThat(dummyStep.nextStep()).isEqualTo(firstStep);
 
-    //Set up blackbox server that recieves our messages then echoes them back to us
+    //Set up blackbox server that receives our messages then echoes them back to us
     nettyRule.setUpServer(address, new ChannelInboundHandlerAdapter());
 
     //Call accept on the first step, which should send our message to the server, which will then be

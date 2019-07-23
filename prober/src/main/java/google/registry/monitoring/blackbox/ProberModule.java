@@ -27,6 +27,10 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.monitoring.blackbox.ProberConfig.Environment;
+import google.registry.monitoring.blackbox.handlers.MetricsHandler;
+import google.registry.monitoring.blackbox.handlers.TimerHandler;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
+import google.registry.monitoring.blackbox.modules.CertificateModule;
 import google.registry.monitoring.blackbox.modules.EppModule.EppProtocol;
 import google.registry.monitoring.blackbox.tokens.Token;
 import google.registry.monitoring.blackbox.connection.Protocol;
@@ -36,13 +40,11 @@ import google.registry.monitoring.blackbox.modules.WebWhoisModule;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpWhoisProtocol;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpsWhoisProtocol;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
-import google.registry.util.GoogleCredentialsBundle;
+import google.registry.util.Clock;
+import google.registry.util.SystemClock;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
 import java.util.Set;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -56,89 +58,12 @@ import javax.inject.Singleton;
 public class ProberModule {
   private final int httpWhoIsPort = 80;
   private final int httpsWhoIsPort = 443;
+  private final int eppPort = 700;
 
   @Parameter(names = "--env", description = "Environment to run the proxy in")
   private Environment env = Environment.LOCAL;
 
-  @Singleton
-  @Provides
-  static GoogleCredentialsBundle provideCredential(ProberConfig config) {
-    try {
-      GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-      if (credentials.createScopedRequired()) {
-        credentials = credentials.createScoped(config.gcpScopes);
-      }
-      return GoogleCredentialsBundle.create(credentials);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to obtain OAuth2 credential.", e);
-    }
-  }
-  @Singleton
-  @Provides
-  static CloudKMS provideCloudKms(GoogleCredentialsBundle credentialsBundle, ProberConfig config) {
-    return new CloudKMS.Builder(
-        credentialsBundle.getHttpTransport(),
-        credentialsBundle.getJsonFactory(),
-        credentialsBundle.getHttpRequestInitializer())
-        .setApplicationName(config.projectId)
-        .build();
-  }
 
-  @Singleton
-  @Provides
-  static Storage provideStorage(GoogleCredentialsBundle credentialsBundle, ProberConfig config) {
-    return new Storage.Builder(
-        credentialsBundle.getHttpTransport(),
-        credentialsBundle.getJsonFactory(),
-        credentialsBundle.getHttpRequestInitializer())
-        .setApplicationName(config.projectId)
-        .build();
-  }
-
-  // This binding should not be used directly. Use those provided in CertificateModule instead.
-  @Provides
-  @Named("encryptedPemBytes")
-  static byte[] provideEncryptedPemBytes(Storage storage, ProberConfig config) {
-    try {
-      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      storage
-          .objects()
-          .get(config.gcs.bucket, config.gcs.sslPemFilename)
-          .executeMediaAndDownloadTo(outputStream);
-      return Base64.getMimeDecoder().decode(outputStream.toByteArray());
-    } catch (IOException e) {
-      throw new RuntimeException(
-          String.format(
-              "Error reading encrypted PEM file %s from GCS bucket %s",
-              config.gcs.sslPemFilename, config.gcs.bucket),
-          e);
-    }
-  }
-
-  // This binding should not be used directly. Use those provided in CertificateModule instead.
-  @Provides
-  @Named("pemBytes")
-  static byte[] providePemBytes(
-      CloudKMS cloudKms, @Named("encryptedPemBytes") byte[] encryptedPemBytes, ProberConfig config) {
-    String cryptoKeyUrl =
-        String.format(
-            "projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
-            config.projectId, config.kms.location, config.kms.keyRing, config.kms.cryptoKey);
-    try {
-      DecryptRequest decryptRequest = new DecryptRequest().encodeCiphertext(encryptedPemBytes);
-      return cloudKms
-          .projects()
-          .locations()
-          .keyRings()
-          .cryptoKeys()
-          .decrypt(cryptoKeyUrl, decryptRequest)
-          .execute()
-          .decodePlaintext();
-    } catch (IOException e) {
-      throw new RuntimeException(
-          String.format("PEM file decryption failed using CryptoKey: %s", cryptoKeyUrl), e);
-    }
-  }
   @Provides
   @Singleton
   EventLoopGroup provideEventLoopGroup() {
@@ -172,17 +97,43 @@ public class ProberModule {
   }
 
   @Provides
-  @EppProtocol
-  ProbingSequence<NioSocketChannel> provideEppSequence(
-      @HttpsWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+  @Named("Epp-Basic")
+  ProbingSequence<NioSocketChannel> provideBasucEppSequence(
+      @Named("Hello") ProbingStep<NioSocketChannel> helloStep,
+      @Named("Login") ProbingStep<NioSocketChannel> loginStep,
+      @Named("Logout") ProbingStep<NioSocketChannel> logoutStep,
       EventLoopGroup eventLoopGroup) {
     return new ProbingSequence.Builder<NioSocketChannel>()
         .setClass(NioSocketChannel.class)
-        .addStep(probingStep)
+        .addStep(helloStep)
         .makeFirstRepeated()
+        .addStep(loginStep)
+        .addStep(logoutStep)
         .eventLoopGroup(eventLoopGroup)
         .build();
   }
+
+  @Provides
+  @Named("Epp-Complex")
+  ProbingSequence<NioSocketChannel> provideComplexEppSequence(
+      @Named("Hello") ProbingStep<NioSocketChannel> helloStep,
+      @Named("Login") ProbingStep<NioSocketChannel> loginStep,
+      @Named("Create") ProbingStep<NioSocketChannel> createStep,
+      @Named("Delete") ProbingStep<NioSocketChannel> deleteStep,
+      @Named("Logout") ProbingStep<NioSocketChannel> logoutStep,
+      EventLoopGroup eventLoopGroup) {
+    return new ProbingSequence.Builder<NioSocketChannel>()
+        .setClass(NioSocketChannel.class)
+        .addStep(helloStep)
+        .makeFirstRepeated()
+        .addStep(loginStep)
+        .addStep(createStep)
+        .addStep(deleteStep)
+        .addStep(logoutStep)
+        .eventLoopGroup(eventLoopGroup)
+        .build();
+  }
+
   @Provides
   @HttpWhoisProtocol
   int provideHttpWhoisPort() {
@@ -193,6 +144,31 @@ public class ProberModule {
   @HttpsWhoisProtocol
   int provideHttpsWhoisPort() {
     return httpsWhoIsPort;
+  }
+
+  @Provides
+  @EppProtocol
+  int provideEppPort() {
+    return eppPort;
+  }
+
+  @Provides
+  @Singleton
+  static Clock provideClock() {
+    return new SystemClock();
+  }
+
+  @Provides
+  @Singleton
+  static TimerHandler provideTimerHandler(Clock clock) {
+    return new TimerHandler(clock);
+  }
+
+  @Provides
+  static MetricsHandler provideMetricsHandlers(
+      MetricsCollector collector,
+      TimerHandler timer) {
+    return new MetricsHandler(timer, collector);
   }
 
   @Provides
@@ -215,7 +191,8 @@ public class ProberModule {
           ProberModule.class,
           WebWhoisModule.class,
           EppModule.class,
-          TokenModule.class
+          TokenModule.class,
+          CertificateModule.class
       })
   public interface ProberComponent {
 
@@ -225,10 +202,21 @@ public class ProberModule {
     @HttpsWhoisProtocol
     public ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence();
 
+    @Named("Epp-Basic")
+    public ProbingSequence<NioSocketChannel> provideBasicEppSequence();
+
+    @Named("Epp-Complex")
+    public ProbingSequence<NioSocketChannel> provideComplexEppSequence();
+
     public ImmutableMap<Integer, Protocol> providePortToProtocolMap();
 
     @WebWhoisProtocol
     public Token provideWebWhoisToken();
 
+    @Named("Transient")
+    public Token provideTransientEppToken();
+
+    @Named("Persistent")
+    public Token providePersistentEppToken();
   }
 }

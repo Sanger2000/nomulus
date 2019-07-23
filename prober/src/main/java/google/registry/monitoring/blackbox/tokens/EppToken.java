@@ -12,29 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package google.registry.monitoring.blackbox.tokens;
 
+import com.google.common.annotations.VisibleForTesting;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
-import javax.inject.Inject;
+import io.netty.channel.Channel;
 
-public class EppToken extends Token {
+/**
+ * {@link Token} subtype that deals performs specified actions for the EPP sequence
+ */
+public abstract class EppToken extends Token {
 
 
   private static final int MAX_DOMAIN_PART_LENGTH = 50;
   private static int clientIdSuffix = 0;
 
-  private String tld = "app";
+  protected final String tld;
   private String host;
   private String currentDomainName;
 
-  @Inject
-  public EppToken() {
+  protected EppToken(String tld, String host) {
+    this.tld = tld;
+    this.host = host;
     currentDomainName = newDomainName(getNewTRID());
   }
 
+
+  protected EppToken(String tld, String host, Channel channel) {
+    this(tld, host);
+    channel(channel);
+  }
+
+  /** Modifies the message to reflect the new domain name and TRID */
   @Override
   public OutboundMessageType modifyMessage(OutboundMessageType originalMessage)
       throws InternalException {
@@ -49,9 +60,9 @@ public class EppToken extends Token {
     return host;
   }
 
-  @Override
-  public Token next() {
-    return new EppToken();
+  @VisibleForTesting
+  String getDomainName() {
+    return currentDomainName;
   }
 
   /**
@@ -63,7 +74,7 @@ public class EppToken extends Token {
    */
   private synchronized String getNewTRID() {
     return String.format("prober-%s-%d-%d",
-        host,
+        "localhost",
         System.currentTimeMillis(),
         clientIdSuffix++);
   }
@@ -83,4 +94,29 @@ public class EppToken extends Token {
     return String.format("%s.%s", sld, tld);
   }
 
+  public static class Transient extends EppToken {
+    public Transient(String tld, String host) {
+      super(tld, host);
+    }
+
+    @Override
+    public Token next() {
+      return new Transient(tld, getHost());
+    }
+  }
+
+  public static class Persistent extends EppToken {
+    public Persistent(String tld, String host) {
+      super(tld, host);
+    }
+
+    private Persistent (String tld, String host, Channel channel) {
+      super(tld, host, channel);
+    }
+
+    @Override
+    public Token next() {
+      return new Persistent(tld, getHost(), channel());
+    }
+  }
 }

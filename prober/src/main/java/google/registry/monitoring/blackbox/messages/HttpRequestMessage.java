@@ -53,4 +53,9 @@ public class HttpRequestMessage extends DefaultFullHttpRequest implements Outbou
     return finalRequest;
   }
 
+  @Override
+  public String name() {
+    return "Http(s) Request Action";
+  }
+
 }

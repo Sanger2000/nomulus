@@ -17,6 +17,9 @@ package google.registry.monitoring.blackbox.messages;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static google.registry.util.ResourceUtils.readResourceStream;
+
+
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
@@ -62,14 +65,14 @@ import org.xml.sax.SAXException;
 public class EppMessage {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static String TEMPLATE_BASE_PATH = "google/registry/monitoring/blackbox/xml/";
-  public static int HEADER_LENGTH = 4;
+  protected static int HEADER_LENGTH = 4;
   private final static DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
 
   private static final XPath xpath;
   private static final Schema eppSchema;
 
   protected Document message;
+
 
   // These are the xpath expressions for EPP success status codes and failure status codes.
   // commands can send one or the other to implement XPASS or XFAIL testing.
@@ -96,53 +99,61 @@ public class EppMessage {
   // http://tools.ietf.org/html/rfc1123#page-13 which suggests a domain part length
   // of 255 SHOULD be supported, so we are permitting something close to that, but reserve
   // at least two characters for a TLD and a full stop (".") character.
-  static final int MAX_DOMAIN_PART_LENGTH = 252;
-  static final int MAX_SLD_DOMAIN_LABEL_LENGTH = 255;
-  static final String VALID_DOMAIN_PART_REGEX;
-  static final String VALID_TLD_PART_REGEX;
+  private static final int MAX_DOMAIN_PART_LENGTH = 252;
+  private static final int MAX_SLD_DOMAIN_LABEL_LENGTH = 255;
+  private static final String VALID_DOMAIN_PART_REGEX;
+  private static final String VALID_TLD_PART_REGEX;
   static final String VALID_SLD_LABEL_REGEX;
   static {
+
+
     // tld label part may contain a dot and end with a dot, and must
     // start and end with 0-9 or a-zA-Z but may contain any number of
     // dashes (minus signs "-") in between (even consecutive)
     VALID_TLD_PART_REGEX = String.format(
         "\\p{Alnum}[-\\p{Alnum}]{0,%s}\\.{0,1}[-\\p{Alnum}]{0,%s}\\p{Alnum}",
-        (EppRequestMessage.MAX_DOMAIN_PART_LENGTH - 2), (EppRequestMessage.MAX_DOMAIN_PART_LENGTH - 2));
+        (MAX_DOMAIN_PART_LENGTH - 2), (MAX_DOMAIN_PART_LENGTH - 2));
     // domain label part ("left" of the tld) must start and end with 0-9 or a-zA-Z but
     // may contain any number of dashes (minus signs "-") in between (even consecutive)
     VALID_DOMAIN_PART_REGEX = String.format("\\p{Alnum}[-\\p{Alnum}]{0,%s}\\p{Alnum}",
-        (EppRequestMessage.MAX_DOMAIN_PART_LENGTH - 2));
+        (MAX_DOMAIN_PART_LENGTH - 2));
     VALID_SLD_LABEL_REGEX = String.format("(?=.{4,%s})%s\\.%s(\\.)*",
-        EppRequestMessage.MAX_SLD_DOMAIN_LABEL_LENGTH,
-        EppRequestMessage.VALID_DOMAIN_PART_REGEX,
-        EppRequestMessage.VALID_TLD_PART_REGEX);
+        MAX_SLD_DOMAIN_LABEL_LENGTH,
+        VALID_DOMAIN_PART_REGEX,
+        VALID_TLD_PART_REGEX);
 
     xpath = XPathFactory.newInstance().newXPath();
     xpath.setNamespaceContext(new EppNamespaceContext());
     docBuilderFactory.setNamespaceAware(true);
 
-    String path = "com/google/domain/registry/monitoring/blackbox/xml/xsd/";
+    String path = "./xsd/";
     StreamSource[] sources;
     try {
       sources = new StreamSource[] {
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "eppcom.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "epp.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "host.xsd")),
-          new StreamSource(
-              EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "contact.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "domain.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "rgp.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "mark.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "dsig.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "smd.xsd")),
-          new StreamSource(EppRequestMessage.class.getClassLoader().getResourceAsStream(path + "launch.xsd")),
+          new StreamSource(readResource(path + "eppcom.xsd")),
+          new StreamSource(readResource(path + "epp.xsd")),
+          new StreamSource(readResource(path + "host.xsd")),
+          new StreamSource(readResource(path + "contact.xsd")),
+          new StreamSource(readResource(path + "domain.xsd")),
+          new StreamSource(readResource(path + "rgp.xsd")),
+          new StreamSource(readResource(path + "mark.xsd")),
+          new StreamSource(readResource(path + "dsig.xsd")),
+          new StreamSource(readResource(path + "smd.xsd")),
+          new StreamSource(readResource(path + "launch.xsd")),
       };
       SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
       eppSchema = schemaFactory.newSchema(sources);
-    } catch (SAXException e) {
+    } catch (SAXException | IOException e) {
       throw new ExceptionInInitializerError(e);
     }
   }
+
+  private static InputStream readResource(String filename)
+      throws IOException {
+    return readResourceStream(EppMessage.class, filename);
+  }
+
+
   /**
    * Validate an EPP XML document against the set of XSD files that make up the EPP XML Schema.
    *
@@ -261,9 +272,9 @@ public class EppMessage {
    * @return the text value for the element, or null is the element is not found
    */
   @Nullable
-  public static String getElementValue(Document xml, String expression) {
+  public String getElementValue(String expression) {
     try {
-      return (String) xpath.evaluate(expression, xml, XPathConstants.STRING);
+      return (String) xpath.evaluate(expression, message, XPathConstants.STRING);
     } catch (XPathExpressionException e) {
       logger.atSevere().withCause(e).log("Bad expression: %s", expression);
       return null;
@@ -306,7 +317,7 @@ public class EppMessage {
    * @return the resulting byte array.
    * @throws EppClientException if the transform fails
    */
-  protected static byte[] xmlDocToByteArray(Document xml) throws EppClientException {
+  public static byte[] xmlDocToByteArray(Document xml) throws EppClientException {
     try {
       Transformer transformer = TransformerFactory.newInstance().newTransformer();
       StreamResult result = new StreamResult(new StringWriter());
@@ -373,7 +384,8 @@ public class EppMessage {
   public static Document getEppDocFromTemplate(String template, Map<String, String> replacements)
       throws IOException, EppClientException {
     Document xmlDoc;
-    try (InputStream is = EppMessage.class.getClassLoader().getResourceAsStream(TEMPLATE_BASE_PATH + template)) {
+
+    try (InputStream is = readResource(template)) {
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       xmlDoc = builder.parse(is);
       for (String key : replacements.keySet()) {
@@ -388,11 +400,21 @@ public class EppMessage {
           node.getFirstChild().setNodeValue(replacements.get(key));
         }
       }
+
       eppValidate(xmlDoc);
     } catch (SAXException | XPathExpressionException | ParserConfigurationException e) {
       throw new EppClientException(e);
     }
     return xmlDoc;
+  }
+
+  @Override
+  public String toString() {
+    try {
+      return xmlDocToString(message);
+    } catch (EppClientException e) {
+      return "No Message Found";
+    }
   }
 
 }

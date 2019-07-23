@@ -43,7 +43,7 @@ import org.joda.time.Duration;
 public abstract class ProbingStep<C extends AbstractChannel> implements Consumer<Token> {
 
   public static final LocalAddress DEFAULT_ADDRESS = new LocalAddress("DEFAULT_ADDRESS_CHECKER");
-  protected static final Duration DEFAULT_DURATION = new Duration(2000L);
+  protected static final Duration DEFAULT_DURATION = new Duration(4000L);
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Default {@link LocalAddress} when not initialized in {@code Builder} */
@@ -137,10 +137,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
       return;
     }
 
-    //If the next step maintains the connection, pass on the channel from this
-    if (protocol().persistentConnection()) {
-      token.channel(nextAction.channel());
-    }
+
 
     //call the created action
     ChannelFuture future = nextAction.call();
@@ -149,7 +146,12 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     future.addListener(f -> {
       if (f.isSuccess()) {
         logger.atInfo().log(String.format("Successfully completed Probing Step: %s", this));
+        //If the next step maintains the connection, pass on the channel from this
+        if (protocol().persistentConnection()) {
+          token.channel(nextAction.channel());
+        }
         nextStep.accept(generateNextToken(token));
+
       } else {
         logger.atSevere().withCause(f.cause()).log("Did not result in future success");
       }
@@ -162,7 +164,7 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
         "OutboundMessage: %s\n" +
         "and parent sequence: %s",
         protocol(),
-        message(),
+        message().getClass().getName(),
         parent);
   }
 

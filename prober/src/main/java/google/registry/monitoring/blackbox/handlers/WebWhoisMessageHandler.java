@@ -36,18 +36,18 @@ public class WebWhoisMessageHandler extends MessageHandler {
 
   /** Retains {@link HttpRequestMessage} and calls super write method*/
   @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     request = (HttpRequestMessage) msg;
     request.retain();
-    super.write(ctx, request, promise);
+    ctx.write(request, promise);
   }
 
 
   /** Converts {@link FullHttpResponse} to {@link HttpResponseMessage}, so it is an {@link InboundMessageType} instance */
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+  public void channelRead(ChannelHandlerContext ctx, Object msg) {
     FullHttpResponse originalResponse = (FullHttpResponse) msg;
     InboundMessageType response = HttpResponseMessage.fromResponse(originalResponse);
-    super.channelRead(ctx, response);
+    ctx.fireChannelRead(response);
   }
 }

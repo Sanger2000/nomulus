@@ -32,6 +32,7 @@ import io.netty.handler.ssl.SslProvider;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.function.Supplier;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -54,8 +55,8 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
 
   private final SslProvider sslProvider;
   private final X509Certificate[] trustedCertificates;
-  private final Supplier<PrivateKey> privateKeySupplier;
-  private final Supplier<X509Certificate[]> certificateSupplier;
+  private final Provider<PrivateKey> privateKeyProvider;
+  private final Provider<X509Certificate[]> certificateProvider;
 
   public SslClientInitializer(SslProvider sslProvider) {
     // null uses the system default trust store.
@@ -63,9 +64,9 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
     this(sslProvider, null, null, null);
   }
 
-  public SslClientInitializer(SslProvider sslProvider, Supplier<PrivateKey> privateKeySupplier, Supplier<X509Certificate[]> certificateSupplier) {
+  public SslClientInitializer(SslProvider sslProvider, Provider<PrivateKey> privateKeyProvider, Provider<X509Certificate[]> certificateProvider) {
     //We use the default trust store here as well, setting trustCertificates to null
-    this(sslProvider, null, privateKeySupplier, certificateSupplier);
+    this(sslProvider, null, privateKeyProvider, certificateProvider);
   }
 
   @VisibleForTesting
@@ -76,14 +77,14 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
   private SslClientInitializer(
       SslProvider sslProvider,
       X509Certificate[] trustCertificates,
-      Supplier<PrivateKey> privateKeySupplier,
-      Supplier<X509Certificate[]> certificateSupplier) {
+      Provider<PrivateKey> privateKeyProvider,
+      Provider<X509Certificate[]> certificateProvider) {
     logger.atInfo().log("Client SSL Provider: %s", sslProvider);
 
     this.sslProvider = sslProvider;
     this.trustedCertificates = trustCertificates;
-    this.privateKeySupplier = privateKeySupplier;
-    this.certificateSupplier = certificateSupplier;
+    this.privateKeyProvider = privateKeyProvider;
+    this.certificateProvider = certificateProvider;
   }
 
   @Override
@@ -97,8 +98,8 @@ public class SslClientInitializer<C extends Channel> extends ChannelInitializer<
         SslContextBuilder.forClient()
             .sslProvider(sslProvider)
             .trustManager(trustedCertificates);
-    if (privateKeySupplier != null && certificateSupplier != null)
-      sslContextBuilder = sslContextBuilder.keyManager(privateKeySupplier.get(), certificateSupplier.get());
+    if (privateKeyProvider != null && certificateProvider != null)
+      sslContextBuilder = sslContextBuilder.keyManager(privateKeyProvider.get(), certificateProvider.get());
 
     SslHandler sslHandler = sslContextBuilder
         .build()

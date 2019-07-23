@@ -25,7 +25,7 @@ import javax.inject.Provider;
 @AutoValue
 public abstract class Protocol {
 
-  abstract String name();
+  public abstract String name();
 
   public abstract int port();
 

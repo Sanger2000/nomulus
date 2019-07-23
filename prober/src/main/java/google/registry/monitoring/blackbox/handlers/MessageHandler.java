@@ -19,6 +19,5 @@ import io.netty.channel.ChannelDuplexHandler;
 /**
  * Abstract class whose subclasses handle the {@link InboundMessageType} and
  * {@link OutboundMessageType} being passed to and from the {@link ActionHandler}
- *
  */
 public abstract class MessageHandler extends ChannelDuplexHandler {}

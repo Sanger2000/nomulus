@@ -39,13 +39,12 @@ public class ProberConfig {
 
   public String projectId;
   public List<String> gcpScopes;
-  public int accessTokenRefreshBeforeExpirationSeconds;
   public int serverCertificateCacheSeconds;
   public Gcs gcs;
-  public Kms kms;
+  public Auth auth;
   public Epp epp;
+  public WebWhois web;
   public Whois whois;
-  public WebWhois webWhois;
   public Metrics metrics;
 
   /** Configuration options that apply to GCS. */
@@ -54,17 +53,19 @@ public class ProberConfig {
     public String sslPemFilename;
   }
 
-  /** Configuration options that apply to Cloud KMS. */
-  public static class Kms {
-    public String location;
-    public String keyRing;
-    public String cryptoKey;
+  /** Configuration options that apply to EPP authentication. */
+  public static class Auth {
+    public String passwordLocation;
+    public String keystorePasswordLocation;
+    public String privateKeyLocation;
+    public String certificateLocation;
   }
 
   /** Configuration options that apply to EPP protocol. */
   public static class Epp {
     public int port;
     public String host;
+    public String clientId;
     public int readTimeoutSeconds;
   }
 
@@ -80,7 +81,7 @@ public class ProberConfig {
   public static class WebWhois {
     public int httpPort;
     public int httpsPort;
-    public String[] domains;
+    public List<String> domains;
   }
 
   /** Configuration options that apply to Stackdriver monitoring metrics. */

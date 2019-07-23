@@ -90,32 +90,32 @@ public class ProbingSequence<C extends AbstractChannel> {
     public ProbingSequence<C> build() {
       currentStep.nextStep(firstSequenceStep);
       currentStep.lastStep();
-      return new ProbingSequence<>(this.firstStep, this.eventLoopGroup, this.classType);
+      return new ProbingSequence<>(this.firstStep, this.currentStep, this.eventLoopGroup, this.classType);
     }
 
   }
 
   /** We point each {@link ProbingStep} to the parent {@link ProbingSequence} so it can access its {@link Bootstrap} */
-  private void setParents() {
-    ProbingStep<C> currentStep = firstStep.parent(this).nextStep();
+  private void setParents(ProbingStep<C> lastStep) {
+    ProbingStep<C> currentStep = firstStep.parent(this);
+    do {
+      currentStep = currentStep.nextStep().parent(this);
+    } while (currentStep != lastStep);
 
-    while (currentStep != firstStep) {
-      currentStep = currentStep.parent(this).nextStep();
-    }
   }
-  private ProbingSequence(ProbingStep<C> firstStep, EventLoopGroup eventLoopGroup,
+  private ProbingSequence(ProbingStep<C> firstStep, ProbingStep<C> lastStep, EventLoopGroup eventLoopGroup,
       Class<C> classType) {
     this.firstStep = firstStep;
     this.eventGroup = eventLoopGroup;
     this.bootstrap = new Bootstrap()
         .group(eventGroup)
         .channel(classType);
-    setParents();
+    setParents(lastStep);
   }
 
   @Override
   public String toString() {
-    return String.format("ProbingSequence with EventLoopGroup: %s and Bootstrap %s", eventGroup, bootstrap);
+    return String.format("ProbingSequence with EventLoopGroup: %s", eventGroup);
 
   }
 }

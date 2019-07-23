@@ -22,6 +22,8 @@ import google.registry.monitoring.blackbox.ProbingStep;
 import google.registry.monitoring.blackbox.ProbingStepWeb;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.MessageHandler;
+import google.registry.monitoring.blackbox.handlers.MetricsHandler;
+import google.registry.monitoring.blackbox.handlers.TimerHandler;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
@@ -92,17 +94,10 @@ public class WebWhoisModule {
   @Singleton
   @Provides
   @IntoSet
-  static Protocol provideHttpProtocolForSet(
-      @HttpWhoisProtocol int httpWhoisPort,
-      @HttpWhoisProtocol ImmutableList<Provider<? extends ChannelHandler>> handlerProviders) {
-    return Protocol.builder()
-        .name(HTTP_PROTOCOL_NAME)
-        .port(httpWhoisPort)
-        .handlerProviders(handlerProviders)
-        .persistentConnection(false)
-        .build();
-  }
+  static Protocol provideHttpProtocolForSet(@HttpWhoisProtocol Protocol protocol) {
+    return protocol;
 
+  }
 
   @Singleton
   @Provides
@@ -121,15 +116,8 @@ public class WebWhoisModule {
   @Singleton
   @Provides
   @IntoSet
-  static Protocol provideHttpsProtocolForSet(
-      @HttpsWhoisProtocol int httpsWhoisPort,
-      @HttpsWhoisProtocol ImmutableList<Provider<? extends ChannelHandler>> handlerProviders) {
-    return Protocol.builder()
-        .name(HTTPS_PROTOCOL_NAME)
-        .port(httpsWhoisPort)
-        .handlerProviders(handlerProviders)
-        .persistentConnection(false)
-        .build();
+  static Protocol provideHttpsProtocolForSet(@HttpsWhoisProtocol Protocol protocol) {
+    return protocol;
   }
 
   @Provides
@@ -142,31 +130,39 @@ public class WebWhoisModule {
   @Provides
   @HttpWhoisProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> providerHttpWhoisHandlerProviders(
+      Provider<TimerHandler> timerHandlerProvider,
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
       @WebWhoisProtocol Provider<MessageHandler> messageHandlerProvider,
-      Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
+      Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider,
+      Provider<MetricsHandler> metricsHandlerProvider) {
     return ImmutableList.of(
+        timerHandlerProvider,
         httpClientCodecProvider,
         httpObjectAggregatorProvider,
         messageHandlerProvider,
-        webWhoisActionHandlerProvider);
+        webWhoisActionHandlerProvider,
+        metricsHandlerProvider);
   }
 
   @Provides
   @HttpsWhoisProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> providerHttpsWhoisHandlerProviders(
+      Provider<TimerHandler> timerHandlerProvider,
       @HttpsWhoisProtocol Provider<SslClientInitializer<NioSocketChannel>> sslClientInitializerProvider,
       Provider<HttpClientCodec> httpClientCodecProvider,
       Provider<HttpObjectAggregator> httpObjectAggregatorProvider,
       @WebWhoisProtocol Provider<MessageHandler> messageHandlerProvider,
-      Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider) {
+      Provider<WebWhoisActionHandler> webWhoisActionHandlerProvider,
+      Provider<MetricsHandler> metricsHandlerProvider) {
     return ImmutableList.of(
+        timerHandlerProvider,
         sslClientInitializerProvider,
         httpClientCodecProvider,
         httpObjectAggregatorProvider,
         messageHandlerProvider,
-        webWhoisActionHandlerProvider);
+        webWhoisActionHandlerProvider,
+        metricsHandlerProvider);
   }
 
 

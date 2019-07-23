@@ -22,6 +22,7 @@ import google.registry.monitoring.blackbox.ProbingStep;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.util.AttributeKey;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.Duration;
 import io.netty.channel.Channel;
@@ -99,6 +100,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
     ChannelFuture channelFuture = actionHandler().getFuture();
     channel().writeAndFlush(outboundMessage());
     channelFuture.addListeners(
+        future -> actionHandler().resetFuture(),
         future -> finished.setSuccess(),
         future -> {
           if (!protocol().persistentConnection()) {
@@ -130,7 +132,8 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
     //Sets Action Handler to appropriately the last channel in the pipeline
     //Logs severe if the last channel in the pipeline is not
     try {
-      this.actionHandler = (ActionHandler) this.channel().pipeline().last();
+      List<String> names = channel().pipeline().names();
+      this.actionHandler = (ActionHandler) this.channel().pipeline().get(names.get(names.size()-3));
     } catch (ClassCastException exception) {
       logger.atSevere().withStackTrace(SMALL).log("Last Handler in the ChannelPipeline is not an ActionHandler");
     }
@@ -184,6 +187,15 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
       channelPipeline.addLast(handlerProvider.get());
     }
   }
+
+  public String connection() {
+    return String.format("%s:%s", host(), protocol().port());
+  }
+
+  public String name() {
+    return outboundMessage().name();
+  }
+
   @Override
   public String toString() {
     return String.format(

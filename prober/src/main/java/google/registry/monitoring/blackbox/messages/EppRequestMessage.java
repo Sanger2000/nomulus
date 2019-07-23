@@ -15,14 +15,19 @@
 
 package google.registry.monitoring.blackbox.messages;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Internal;
 import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.modules.EppModule.EppProtocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.io.IOException;
 import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.w3c.dom.Document;
 
 public abstract class EppRequestMessage extends EppMessage implements OutboundMessageType {
 
@@ -45,6 +50,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
         .build();
     try {
       message = getEppDocFromTemplate(template, nextArguments);
+
     } catch (IOException | EppClientException e) {
       throw new InternalException(e);
     }
@@ -54,7 +60,6 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
   public String getClTRID() {
     return clTRID;
   }
-
 
   private EppRequestMessage(String template, ImmutableMap<String, String> replacements) {
     this.template = template;
@@ -74,30 +79,28 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
   }
 
   public static class HELLO extends EppRequestMessage {
-    private static final String template = "hello.xml";
+
+    @Inject
     public HELLO() {
-      super(
-          template,
-          ImmutableMap.of()
-      );
+      super(null, null);
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
-      this.clTRID = clTRID;
-      try {
-        message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
-      } catch (IOException | EppClientException e) {
-        throw new InternalException(e);
-      }
+    public EppRequestMessage modifyMessage(String clTRID, String newDomain){
       return this;
+    }
+
+    @Override
+    public String name() {
+      return "Hello Action";
     }
   }
 
   public static class LOGIN extends EppRequestMessage {
     private static final String template = "login.xml";
 
-    public LOGIN(String eppClientId, String eppClientPassword) {
+    @Inject
+    public LOGIN(@Named("epp_user_id") String eppClientId, @Named("epp_password") String eppClientPassword) {
       super(
           template,
           ImmutableMap.of(
@@ -108,7 +111,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
+    public EppRequestMessage modifyMessage(String clTRID, String domainName) throws InternalException {
       this.clTRID = clTRID;
       Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
           .putAll(replacements)
@@ -121,55 +124,83 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
       }
       return this;
     }
+    @Override
+    public String name() {
+      return "Login Action";
+    }
   }
 
   public static class CHECK extends EppRequestMessage {
     private static final String template = "check.xml";
 
-    public CHECK(String clTRID) {
+    @Inject
+    public CHECK() {
       super(
           template,
           ImmutableMap.of()
       );
+    }
+
+    @Override
+    public String name() {
+      return "Check Action";
     }
   }
 
   public static class CLAIMSCHECK extends EppRequestMessage {
     private static final String template = "claimscheck.xml";
 
-    public CLAIMSCHECK(String clTRID) {
+    @Inject
+    public CLAIMSCHECK() {
       super(
           template,
           ImmutableMap.of()
       );
+    }
+
+    @Override
+    public String name() {
+      return "Claimscheck Action";
     }
   }
 
   public static class CREATE extends EppRequestMessage {
     private static final String template = "create.xml";
 
-    public CREATE(String clTRID) {
+    @Inject
+    public CREATE() {
       super(
           template,
           ImmutableMap.of()
       );
     }
+    @Override
+    public String name() {
+      return "Create Action";
+    }
   }
 
   public static class DELETE extends EppRequestMessage {
     private static final String template = "delete.xml";
-    public DELETE(String clTRID) {
+
+    @Inject
+    public DELETE() {
       super(
           template,
           ImmutableMap.of()
       );
+    }
+    @Override
+    public String name() {
+      return "Delete Action";
     }
   }
 
   public static class LOGOUT extends EppRequestMessage {
     private static final String template = "logout.xml";
 
-    public LOGOUT(String clTRID) {
+    @Inject
+    public LOGOUT() {
       super(
           template,
           ImmutableMap.of()
@@ -186,7 +217,13 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
       }
       return this;
     }
+
+    @Override
+    public String name() {
+      return "Logout Action";
+    }
   }
+
 
 
 }

@@ -17,7 +17,6 @@ package google.registry.monitoring.blackbox.tokens;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 
-
 /**
  * {@link Token} subtype that deals performs specified actions for the WebWhois sequence
  */
