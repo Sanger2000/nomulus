@@ -1,6 +1,6 @@
 <epp xmlns="urn:ietf:params:xml:ns:epp-1.0">
     <greeting>
-    <svID>@@SERVERID@@</svID>
+    <svID>@@SVID@@</svID>
     <svDate>2012-03-5T10:17:00Z</svDate>
     <svcMenu>
       <version>1.0</version>

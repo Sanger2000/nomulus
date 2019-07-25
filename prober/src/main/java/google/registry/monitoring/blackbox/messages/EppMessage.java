@@ -253,9 +253,10 @@ public class EppMessage {
         throw new ResponseException(e);
       }
     }
-
+    System.out.println(getElementValue(xml, EppRequestMessage.CLIENT_TRID_KEY));
     try {
       for (String exp : expressions) {
+        System.out.println(exp);
         NodeList nodes = (NodeList) xpath.evaluate(exp, xml, XPathConstants.NODESET);
         if (nodes.getLength() == 0) {
           throw new ResponseException("invalid EPP response. failed expression " + exp);
@@ -271,6 +272,15 @@ public class EppMessage {
    *
    * @return the text value for the element, or null is the element is not found
    */
+  public static String getElementValue(Document xml, String expression) {
+    try {
+      return (String) xpath.evaluate(expression, xml, XPathConstants.STRING);
+    } catch (XPathExpressionException e) {
+      logger.atSevere().withCause(e).log("Bad expression: %s", expression);
+      return null;
+    }
+  }
+
   @Nullable
   public String getElementValue(String expression) {
     try {
@@ -345,7 +355,7 @@ public class EppMessage {
    * @return the resulting Document
    * @throws EppClientException if the transform fails
    */
-  protected static Document byteArrayToXmlDoc(byte[] responseBuffer)
+  public static Document byteArrayToXmlDoc(byte[] responseBuffer)
       throws ResponseException {
     Document xml;
     try {

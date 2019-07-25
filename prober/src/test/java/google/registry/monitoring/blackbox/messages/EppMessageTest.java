@@ -110,7 +110,7 @@ public class EppMessageTest {
   }
 
   /**
-   * These test a "response" without validating a document. This is to make it easier to test the
+   * These test a "success" without validating a document. This is to make it easier to test the
    * XPath part of the verify in isolation. See EppClientConnectionTest for tests that verify an
    * actual (greeting) respoonse.
    */

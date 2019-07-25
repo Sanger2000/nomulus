@@ -25,14 +25,20 @@ import io.netty.channel.Channel;
  */
 public abstract class EppToken extends Token {
 
-
+  /** Describes the maximum possible length of generated domain name */
   private static final int MAX_DOMAIN_PART_LENGTH = 50;
+
+  /** On every new TRID generated, we increment this static counter to help for added differentiation */
   private static int clientIdSuffix = 0;
 
   protected final String tld;
   private String host;
   private String currentDomainName;
 
+  /**
+   * Always the constructor used to provide any {@link EppToken}, with {@code tld}
+   * and {@code host} specified by {@link Dagger}
+   */
   protected EppToken(String tld, String host) {
     this.tld = tld;
     this.host = host;
@@ -40,6 +46,7 @@ public abstract class EppToken extends Token {
   }
 
 
+  /** Constructor used when passing on same {@link Channel} to next {@link Token}. */
   protected EppToken(String tld, String host, Channel channel) {
     this(tld, host);
     channel(channel);
@@ -47,13 +54,10 @@ public abstract class EppToken extends Token {
 
   /** Modifies the message to reflect the new domain name and TRID */
   @Override
-  public OutboundMessageType modifyMessage(OutboundMessageType originalMessage)
-      throws InternalException {
-    return ((EppRequestMessage) originalMessage).modifyMessage(
-        getNewTRID(),
-        currentDomainName
-    );
+  public OutboundMessageType modifyMessage(OutboundMessageType originalMessage) throws InternalException {
+    return ((EppRequestMessage) originalMessage).modifyMessage(getNewTRID(), currentDomainName);
   }
+
 
   @Override
   public String getHost() {
@@ -61,16 +65,15 @@ public abstract class EppToken extends Token {
   }
 
   @VisibleForTesting
-  String getDomainName() {
+  String getCurrentDomainName() {
     return currentDomainName;
   }
-
   /**
    * Return a unique string usable as an EPP client transaction ID.
    *
    * <p><b>Warning:</b> The prober cleanup servlet relies on the timestamp being in the third
    * position when splitting on dashes. Do not change this format without updating that code as
-   * well.
+   * well.</p>
    */
   private synchronized String getNewTRID() {
     return String.format("prober-%s-%d-%d",
@@ -94,6 +97,11 @@ public abstract class EppToken extends Token {
     return String.format("%s.%s", sld, tld);
   }
 
+
+  /**
+   * {@link EppToken} Subclass that represents a token used in a transient sequence,
+   * meaning the connection is remade on each new iteration of the {@link ProbingSequence}
+   */
   public static class Transient extends EppToken {
     public Transient(String tld, String host) {
       super(tld, host);
@@ -105,6 +113,10 @@ public abstract class EppToken extends Token {
     }
   }
 
+  /**
+   * {@link EppToken} Subclass that represents a token used in a persistent sequence,
+   * meaning the connection is maintained on each new iteration of the {@link ProbingSequence}
+   */
   public static class Persistent extends EppToken {
     public Persistent(String tld, String host) {
       super(tld, host);

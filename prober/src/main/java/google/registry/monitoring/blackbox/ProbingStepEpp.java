@@ -28,9 +28,12 @@ import javax.inject.Inject;
  * @param <C> refer to {@code C} in {@link ProbingStep}
  *
  * <p>Only passes in requisite {@link Protocol} and {@link OutboundMessageType} to parent constructor</p>
+ *
+ * <p>{@link Dagger} provides 7 different types of these {@link ProbingStep}s, representing the EPP actions:
+ * HELLO, LOGIN, CREATE, CHECK, CLAIMSCHECK, DELETE, and LOGOUT.</p>
  */
-public class ProbingStepEpp<C extends AbstractChannel> extends ProbingStep<C>{
-  @Inject
+public class ProbingStepEpp extends ProbingStep{
+
   public ProbingStepEpp(Protocol protocol, EppRequestMessage message) {
     super(protocol, message);
     duration = DEFAULT_DURATION;

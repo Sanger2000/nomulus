@@ -58,42 +58,42 @@ public class EppModule {
 
   @Provides
   @Named("Hello")
-  static ProbingStep<NioSocketChannel> provideEppHelloStep(
+  static ProbingStep provideEppHelloStep(
       @EppProtocol Protocol eppProtocol,
       EppRequestMessage.HELLO helloRequest) {
-    return new ProbingStepEpp<>(eppProtocol, helloRequest);
+    return new ProbingStepEpp(eppProtocol, helloRequest);
   }
 
   @Provides
   @Named("Login")
-  static ProbingStep<NioSocketChannel> provideEppLoginStep(
+  static ProbingStep provideEppLoginStep(
       @EppProtocol Protocol eppProtocol,
       EppRequestMessage.LOGIN loginRequest) {
-    return new ProbingStepEpp<>(eppProtocol, loginRequest);
+    return new ProbingStepEpp(eppProtocol, loginRequest);
   }
 
   @Provides
   @Named("Create")
-  static ProbingStep<NioSocketChannel> provideEppCreateStep(
+  static ProbingStep provideEppCreateStep(
       @EppProtocol Protocol eppProtocol,
       EppRequestMessage.CREATE createRequest) {
-    return new ProbingStepEpp<>(eppProtocol, createRequest);
+    return new ProbingStepEpp(eppProtocol, createRequest);
   }
 
   @Provides
   @Named("Delete")
-  static ProbingStep<NioSocketChannel> provideEppDeleteStep(
+  static ProbingStep provideEppDeleteStep(
       @EppProtocol Protocol eppProtocol,
       EppRequestMessage.DELETE deleteRequest) {
-    return new ProbingStepEpp<>(eppProtocol, deleteRequest);
+    return new ProbingStepEpp(eppProtocol, deleteRequest);
   }
 
   @Provides
   @Named("Logout")
-  static ProbingStep<NioSocketChannel> provideEppLogoutStep(
+  static ProbingStep provideEppLogoutStep(
       @EppProtocol Protocol eppProtocol,
       EppRequestMessage.LOGOUT logoutRequest) {
-    return new ProbingStepEpp<>(eppProtocol, logoutRequest);
+    return new ProbingStepEpp(eppProtocol, logoutRequest);
   }
 
 
@@ -145,14 +145,6 @@ public class EppModule {
 
     return new SslClientInitializer<>(sslProvider, privateKeyProvider, certificatesProvider);
   }
-
-  /**
-   * epp_server_list = ["epp.registry-sandbox.google"]
-   *     whois_server_list = ["whois.registry-sandbox.google"]
-   *     epp_tld_list = ["%cell%-any.test"]
-   *     epp_client_id_list = ["prober-%cell%-any"]
-   */
-
 
 
   @Provides

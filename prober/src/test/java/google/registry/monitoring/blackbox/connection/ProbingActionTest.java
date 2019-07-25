@@ -19,6 +19,8 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.TestServers.EchoServer;
+import google.registry.monitoring.blackbox.TestServers.TestServer;
 import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
 import google.registry.monitoring.blackbox.connection.ExistingChannelAction;
@@ -38,9 +40,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import javax.inject.Provider;
 import org.joda.time.Duration;
 import org.junit.Rule;
@@ -59,14 +61,13 @@ public class ProbingActionTest {
   private final String TEST_MESSAGE = "MESSAGE_TEST";
   private final String SECONDARY_TEST_MESSAGE = "SECONDARY_MESSAGE_TEST";
   private final String PROTOCOL_NAME = "TEST_PROTOCOL";
-  private final String ADDRESS_NAME = "TEST_ADDRESS";
-  private final int TEST_PORT = 0;
+  private final String LOCALHOST = "127.0.0.1";
+  private final int TEST_PORT = 8888;
 
   private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
-  private final LocalAddress address = new LocalAddress(ADDRESS_NAME);
   private Bootstrap bootstrap = new Bootstrap()
     .group(eventLoopGroup)
-    .channel(LocalChannel.class);
+    .channel(NioSocketChannel.class);
 
   /** We use custom Test {@link ActionHandler} and {@link ConversionHandler} so test depends only on {@link ProbingAction} */
   private ActionHandler testHandler = new TestActionHandler();
@@ -79,6 +80,7 @@ public class ProbingActionTest {
   private ProbingAction existingChannelAction;
   private EmbeddedChannel channel;
   private Protocol protocol;
+  private EchoServer server;
 
   /** Used for testing how well probing step can create connection to blackbox server */
   @Rule
@@ -105,13 +107,12 @@ public class ProbingActionTest {
 
   /** Sets up a {@link NewChannelAction} with test specified attributes */
   private void setupNewChannelAction() {
-    newChannelAction = NewChannelAction.<LocalChannel>builder()
+    newChannelAction = NewChannelAction.builder()
         .bootstrap(bootstrap)
         .protocol(protocol)
         .delay(Duration.ZERO)
         .outboundMessage(new DuplexMessageTest(TEST_MESSAGE))
-        .host("")
-        .address(address)
+        .host(LOCALHOST)
         .build();
   }
 
@@ -126,8 +127,13 @@ public class ProbingActionTest {
         .protocol(protocol)
         .delay(Duration.ZERO)
         .outboundMessage(new DuplexMessageTest(TEST_MESSAGE))
-        .host("")
+        .host(LOCALHOST)
         .build();
+  }
+
+  private void setupServer() {
+    server = new EchoServer(eventLoopGroup);
+    server.setUpServer(TEST_PORT, new ChannelInboundHandlerAdapter());
   }
 
   @Test
@@ -161,12 +167,12 @@ public class ProbingActionTest {
     //setup
     setupNewChannelProtocol();
     setupNewChannelAction();
-    nettyRule.setUpServer(address, new ChannelInboundHandlerAdapter());
+    setupServer();
 
     ChannelFuture future = newChannelAction.call();
 
     //Tests to see if message is properly sent to remote server
-    nettyRule.assertThatCustomWorks(TEST_MESSAGE);
+    server.assertThatCustomWorks(TEST_MESSAGE);
 
     future.sync();
     //Tests to see that, since server responds, we have set future to true

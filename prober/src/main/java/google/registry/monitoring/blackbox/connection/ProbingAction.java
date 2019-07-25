@@ -22,7 +22,9 @@ import google.registry.monitoring.blackbox.ProbingStep;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.util.AttributeKey;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.Duration;
 import io.netty.channel.Channel;
@@ -60,10 +62,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
   public final static AttributeKey<ProbingAction> PROBING_ACTION_KEY = AttributeKey.valueOf("PROBING_ACTION_KEY");
 
 
-  /**
-   * The {@link ActionHandler} associated with this {@link ProbingAction}, which is always the
-   * last {@link ChannelHandler} in the pipeline
-   * */
+  /** The {@link ActionHandler} associated with this {@link ProbingAction}, which is always the last {@link ChannelHandler} in the pipeline */
   private ActionHandler actionHandler;
 
 
@@ -95,10 +94,12 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
   public abstract <B extends Builder<B, P>, P extends ProbingAction> Builder<B, P> toBuilder();
 
 
-  /** Performs the action specified by the ProbingAction and sets the ChannelPromise specified to a success */
+  /** Performs the action specified by the {@link ProbingAction} and sets the {@link ChannelPromise} specified to a success */
   private void informListeners(ChannelPromise finished) {
     ChannelFuture channelFuture = actionHandler().getFuture();
     channel().writeAndFlush(outboundMessage());
+    System.out.println("test");
+    System.out.println(outboundMessage());
     channelFuture.addListeners(
         future -> actionHandler().resetFuture(),
         future -> finished.setSuccess(),
@@ -131,11 +132,18 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
     //Sets Action Handler to appropriately the last channel in the pipeline
     //Logs severe if the last channel in the pipeline is not
-    try {
-      List<String> names = channel().pipeline().names();
-      this.actionHandler = (ActionHandler) this.channel().pipeline().get(names.get(names.size()-3));
-    } catch (ClassCastException exception) {
-      logger.atSevere().withStackTrace(SMALL).log("Last Handler in the ChannelPipeline is not an ActionHandler");
+
+      Iterator<Map.Entry<String, ChannelHandler>> handlerIterator = channel().pipeline().iterator();
+
+      while (handlerIterator.hasNext()) {
+        ChannelHandler currentHandler = handlerIterator.next().getValue();
+        if (ActionHandler.class.isInstance(currentHandler)) {
+          actionHandler = (ActionHandler) currentHandler;
+          break;
+        }
+      }
+    if (actionHandler == null) {
+      logger.atSevere().withStackTrace(SMALL).log("ActionHandler not in Channel Pipeline");
     }
 
     //ChannelPromise that we use to inform ProbingStep when we are finished.

@@ -15,11 +15,14 @@
 package google.registry.monitoring.blackbox;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.monitoring.blackbox.TestUtils.LOCALHOST;
+import static google.registry.monitoring.blackbox.TestUtils.TEST_PORT;
 import static google.registry.testing.JUnitBackports.assertThrows;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.TestServers.EchoServer;
 import google.registry.monitoring.blackbox.TestUtils.DummyStep;
 import google.registry.monitoring.blackbox.TestUtils.ExistingChannelToken;
 import google.registry.monitoring.blackbox.TestUtils.NewChannelToken;
@@ -42,6 +45,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import javax.inject.Provider;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -51,7 +55,6 @@ public class ProbingSequenceStepTest {
   /** Basic Constants necessary for tests */
   private final String ADDRESS_NAME = "TEST_ADDRESS";
   private final String PROTOCOL_NAME = "TEST_PROTOCOL";
-  private final int PROTOCOL_PORT = 0;
   private final String TEST_MESSAGE = "TEST_MESSAGE";
   private final String SECONDARY_TEST_MESSAGE = "SECONDARY_TEST_MESSAGE";
 
@@ -60,16 +63,16 @@ public class ProbingSequenceStepTest {
 
   /** Used for testing how well probing step can create connection to blackbox server */
   @Rule
-  public NettyRule nettyRule = new NettyRule(eventLoopGroup);
+  public EchoServer echoServer = new EchoServer(eventLoopGroup);
 
 
-  /** The two main handlers we need in any test pipeline used that connects to {@link NettyRule's server}**/
-  private ActionHandler testHandler = new TestActionHandler();
-  private ChannelHandler conversionHandler = new ConversionHandler();
+  /** The two main handlers we need in any test pipeline used that connects to {@link echoServer's server}**/
+  private ActionHandler testHandler;
+  private ChannelHandler conversionHandler;
 
   /** Wrapper provider classes of these handlers */
-  private Provider<? extends ChannelHandler> testHandlerProvider = new TestProvider<>(testHandler);
-  private Provider<? extends ChannelHandler> conversionHandlerProvider = new TestProvider<>(conversionHandler);
+  private Provider<? extends ChannelHandler> testHandlerProvider;
+  private Provider<? extends ChannelHandler> conversionHandlerProvider;
 
   /** Embedded Channel and Protocol both are stated, but not specified until we know which test we are running) */
   private EmbeddedChannel channel;
@@ -78,18 +81,27 @@ public class ProbingSequenceStepTest {
 
 
   /** Fields that correspond to instances of each of the above {@link ProbingStep} classes in the same order */
-  private ProbingStep<LocalChannel> firstStep;
-  private ProbingStep<LocalChannel> dummyStep;
+  private ProbingStep firstStep;
+  private ProbingStep dummyStep;
 
   /** Never explicitly used, but our ProbingStep depends on the ProbingSequence to function, so we create a declare a throwaway ProbingSequence */
-  private ProbingSequence<LocalChannel> testSequence;
+  private ProbingSequence testSequence;
 
   /** We declare the token we feed into our probing step, but will specify what kind it is, depending on if we are creating a new channel or reusing one */
   private Token testToken;
 
+  private void setupHandlers() {
+    testHandler = new TestActionHandler();
+    conversionHandler = new ConversionHandler();
+  }
+
+  private void setupProviders() {
+    testHandlerProvider = new TestProvider<>(testHandler);
+    conversionHandlerProvider = new TestProvider<>(conversionHandler);
+  }
   /** Sets up testToken to return arbitrary values, and no channel. Used when we create a new channel */
   private void setupNewChannelToken() {
-    testToken = new NewChannelToken("");
+    testToken = new NewChannelToken(LOCALHOST);
   }
 
   /** Sets up testToken to return arbitrary value, and the embedded channel. Used for when the ProbingStep generates an ExistingChannelAction */
@@ -113,7 +125,7 @@ public class ProbingSequenceStepTest {
     testProtocol = Protocol.builder()
         .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
         .name(PROTOCOL_NAME)
-        .port(PROTOCOL_PORT)
+        .port(TEST_PORT)
         .persistentConnection(false)
         .build();
   }
@@ -123,26 +135,32 @@ public class ProbingSequenceStepTest {
     testProtocol = Protocol.builder()
         .handlerProviders(ImmutableList.of(conversionHandlerProvider, testHandlerProvider))
         .name(PROTOCOL_NAME)
-        .port(PROTOCOL_PORT)
+        .port(TEST_PORT)
         .persistentConnection(true)
         .build();
   }
 
   /** Builds a sequence with our probing steps and the EventLoopGroup we initialized */
-  private void setupSequence() {
-    testSequence = new ProbingSequence.Builder<LocalChannel>()
+  private void setupSequence(Token token) {
+    testSequence = new ProbingSequence.Builder()
         .eventLoopGroup(eventLoopGroup)
-        .setClass(LocalChannel.class)
+        .addToken(token)
         .addStep(firstStep)
         .makeFirstRepeated()
         .addStep(dummyStep)
         .build();
   }
 
+  @Before
+  public void setup() {
+    setupHandlers();
+    setupProviders();
+  }
 
   @Test
   public void testGeneralBehavior() {
     //setup
+    System.out.println(testHandler);
     setupNewProtocol();
     setupSteps();
     setupNewChannelToken();
@@ -158,17 +176,19 @@ public class ProbingSequenceStepTest {
   @Test
   public void testWithSequence_NewChannel() throws Exception {
     //setup
+    System.out.println(testHandler);
     setupNewProtocol();
     setupSteps();
-    setupSequence();
     setupNewChannelToken();
+    setupSequence(testToken);
+
 
     //checks that the ProbingSteps are appropriately pointing to each other
     assertThat(firstStep.nextStep()).isEqualTo(dummyStep);
     assertThat(dummyStep.nextStep()).isEqualTo(firstStep);
 
     //Set up blackbox server that receives our messages then echoes them back to us
-    nettyRule.setUpServer(address, new ChannelInboundHandlerAdapter());
+    echoServer.setUpServer(TEST_PORT, new ChannelInboundHandlerAdapter());
 
     //Call accept on the first step, which should send our message to the server, which will then be
     //echoed back to us, causing us to move to the next step
@@ -178,7 +198,7 @@ public class ProbingSequenceStepTest {
     DefaultPromise<Token> future = ((DummyStep)dummyStep).getFuture();
 
     //checks that we have appropriately sent the write message to server
-    nettyRule.assertThatCustomWorks(TEST_MESSAGE);
+    echoServer.assertThatCustomWorks(TEST_MESSAGE);
 
     //checks that when the future is successful, we pass down the requisite token
     assertThat(future.get()).isEqualTo(testToken);
@@ -189,10 +209,11 @@ public class ProbingSequenceStepTest {
   public void testWithSequence_ExistingChannel() throws Exception {
     //setup
     setupExistingProtocol();
-    setupSteps();
-    setupSequence();
     setupChannel();
+    setupSteps();
     setupExistingChannelToken();
+    setupSequence(testToken);
+
 
     //checks that the ProbingSteps are appropriately pointing to each other
     assertThat(firstStep.nextStep()).isEqualTo(dummyStep);
@@ -207,7 +228,7 @@ public class ProbingSequenceStepTest {
     //Obtains future for when we have moved to the next step
     DefaultPromise<Token> future = ((DummyStep)dummyStep).getFuture();
 
-    //Write response to our message down EmbeddedChannel pipeline
+    //Write success to our message down EmbeddedChannel pipeline
     channel.writeInbound(Unpooled.wrappedBuffer(SECONDARY_TEST_MESSAGE.getBytes(US_ASCII)));
 
     //At this point, we should have received the message, so the future obtained should be marked as a success

@@ -14,9 +14,13 @@
 
 package google.registry.monitoring.blackbox.messages;
 
+import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.tokens.Token;
+
 /**
  * Marker Interface that is implemented by all classes that serve as {@code outboundMessages} in channel pipeline
  */
 public interface OutboundMessageType {
   public String name();
+  public OutboundMessageType modifyMessage(String... args) throws InternalException;
 }

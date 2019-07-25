@@ -35,9 +35,8 @@ public class Prober {
 
   public static void main(String[] args) {
 
-    ProbingSequence<NioSocketChannel> eppSequence = proberComponent.provideComplexEppSequence();
-    Token eppToken = proberComponent.provideTransientEppToken();
-    eppSequence.start(eppToken);
+    ProbingSequence eppSequence = proberComponent.provideComplexEppSequence();
+    eppSequence.start();
 
 
   }

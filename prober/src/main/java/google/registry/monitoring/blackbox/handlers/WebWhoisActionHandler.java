@@ -21,7 +21,6 @@ import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.Prober;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.exceptions.ResponseException;
-import google.registry.monitoring.blackbox.exceptions.ServerSideException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;

@@ -52,7 +52,9 @@ import javax.inject.Singleton;
 /**
  * {@link Dagger} main module, which Provides {@link ProbingSequences} and houses {@link ProberComponent}
  *
- * <p>Provides</p>
+ * <p>Provides each {@link ProbingSequence}, each {@link Token} and basic building blocks that
+ * comprise the entire Prober. In addition, other minor necessary global variables are provided,
+ * such as the {@code portToProtocolMap}</p>
  */
 @Module
 public class ProberModule {
@@ -72,11 +74,12 @@ public class ProberModule {
 
   @Provides
   @HttpWhoisProtocol
-  ProbingSequence<NioSocketChannel> provideHttpWhoisSequence(
-      @HttpWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+  ProbingSequence provideHttpWhoisSequence(
+      @HttpWhoisProtocol ProbingStep probingStep,
+      @WebWhoisProtocol Token token,
       EventLoopGroup eventLoopGroup) {
-    return new ProbingSequence.Builder<NioSocketChannel>()
-        .setClass(NioSocketChannel.class)
+    return new ProbingSequence.Builder()
+        .addToken(token)
         .addStep(probingStep)
         .makeFirstRepeated()
         .eventLoopGroup(eventLoopGroup)
@@ -85,11 +88,12 @@ public class ProberModule {
 
   @Provides
   @HttpsWhoisProtocol
-  ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence(
-      @HttpsWhoisProtocol ProbingStep<NioSocketChannel> probingStep,
+  ProbingSequence provideHttpsWhoisSequence(
+      @HttpsWhoisProtocol ProbingStep probingStep,
+      @WebWhoisProtocol Token token,
       EventLoopGroup eventLoopGroup) {
-    return new ProbingSequence.Builder<NioSocketChannel>()
-        .setClass(NioSocketChannel.class)
+    return new ProbingSequence.Builder()
+        .addToken(token)
         .addStep(probingStep)
         .makeFirstRepeated()
         .eventLoopGroup(eventLoopGroup)
@@ -98,13 +102,14 @@ public class ProberModule {
 
   @Provides
   @Named("Epp-Basic")
-  ProbingSequence<NioSocketChannel> provideBasucEppSequence(
-      @Named("Hello") ProbingStep<NioSocketChannel> helloStep,
-      @Named("Login") ProbingStep<NioSocketChannel> loginStep,
-      @Named("Logout") ProbingStep<NioSocketChannel> logoutStep,
+  ProbingSequence provideBasicEppSequence(
+      @Named("Hello") ProbingStep helloStep,
+      @Named("Login") ProbingStep loginStep,
+      @Named("Logout") ProbingStep logoutStep,
+      @Named("Transient") Token token,
       EventLoopGroup eventLoopGroup) {
-    return new ProbingSequence.Builder<NioSocketChannel>()
-        .setClass(NioSocketChannel.class)
+    return new ProbingSequence.Builder()
+        .addToken(token)
         .addStep(helloStep)
         .makeFirstRepeated()
         .addStep(loginStep)
@@ -115,15 +120,16 @@ public class ProberModule {
 
   @Provides
   @Named("Epp-Complex")
-  ProbingSequence<NioSocketChannel> provideComplexEppSequence(
-      @Named("Hello") ProbingStep<NioSocketChannel> helloStep,
-      @Named("Login") ProbingStep<NioSocketChannel> loginStep,
-      @Named("Create") ProbingStep<NioSocketChannel> createStep,
-      @Named("Delete") ProbingStep<NioSocketChannel> deleteStep,
-      @Named("Logout") ProbingStep<NioSocketChannel> logoutStep,
+  ProbingSequence provideComplexEppSequence(
+      @Named("Hello") ProbingStep helloStep,
+      @Named("Login") ProbingStep loginStep,
+      @Named("Create") ProbingStep createStep,
+      @Named("Delete") ProbingStep deleteStep,
+      @Named("Logout") ProbingStep logoutStep,
+      @Named("Transient") Token token,
       EventLoopGroup eventLoopGroup) {
-    return new ProbingSequence.Builder<NioSocketChannel>()
-        .setClass(NioSocketChannel.class)
+    return new ProbingSequence.Builder()
+        .addToken(token)
         .addStep(helloStep)
         .makeFirstRepeated()
         .addStep(loginStep)
@@ -184,7 +190,10 @@ public class ProberModule {
   }
 
 
-
+  /**
+   * Main {@link Dagger} {@link Component} that supplies all necessary components
+   * to successfully run a Prober with multiple probingSequences
+   */
   @Singleton
   @Component(
       modules = {
@@ -197,26 +206,19 @@ public class ProberModule {
   public interface ProberComponent {
 
     @HttpWhoisProtocol
-    public ProbingSequence<NioSocketChannel> provideHttpWhoisSequence();
+    ProbingSequence provideHttpWhoisSequence();
 
     @HttpsWhoisProtocol
-    public ProbingSequence<NioSocketChannel> provideHttpsWhoisSequence();
+    ProbingSequence provideHttpsWhoisSequence();
 
     @Named("Epp-Basic")
-    public ProbingSequence<NioSocketChannel> provideBasicEppSequence();
+    ProbingSequence provideBasicEppSequence();
 
     @Named("Epp-Complex")
-    public ProbingSequence<NioSocketChannel> provideComplexEppSequence();
+    ProbingSequence provideComplexEppSequence();
 
-    public ImmutableMap<Integer, Protocol> providePortToProtocolMap();
+    ImmutableMap<Integer, Protocol> providePortToProtocolMap();
 
-    @WebWhoisProtocol
-    public Token provideWebWhoisToken();
 
-    @Named("Transient")
-    public Token provideTransientEppToken();
-
-    @Named("Persistent")
-    public Token providePersistentEppToken();
   }
 }

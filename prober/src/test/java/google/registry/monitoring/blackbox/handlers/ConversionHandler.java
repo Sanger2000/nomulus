@@ -45,6 +45,7 @@ public class ConversionHandler extends ChannelDuplexHandler {
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     String message = msg.toString();
+    System.out.println(message);
     ByteBuf buf = Unpooled.wrappedBuffer(message.getBytes(US_ASCII));
     ctx.write(buf, promise);
   }

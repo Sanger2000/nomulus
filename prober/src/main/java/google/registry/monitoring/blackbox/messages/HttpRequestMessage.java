@@ -14,6 +14,7 @@
 
 package google.registry.monitoring.blackbox.messages;
 
+import google.registry.monitoring.blackbox.tokens.Token;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -35,6 +36,12 @@ public class HttpRequestMessage extends DefaultFullHttpRequest implements Outbou
   @Override
   public HttpRequestMessage setUri(String path) {
     super.setUri(path);
+    return this;
+  }
+
+  @Override
+  public HttpRequestMessage modifyMessage(String... args) {
+    headers().set("host", args[0]);
     return this;
   }
 

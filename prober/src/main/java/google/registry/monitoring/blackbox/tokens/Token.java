@@ -31,15 +31,14 @@ public abstract class Token {
   protected Channel channel;
 
   public abstract Token next();
-  public abstract OutboundMessageType modifyMessage(OutboundMessageType message)
-      throws InternalException;
   public abstract String getHost();
+  public abstract OutboundMessageType modifyMessage(OutboundMessageType message) throws InternalException;
 
   public void channel(Channel channel) {
     this.channel = channel;
   }
+
   public Channel channel() {
     return this.channel;
   }
-
 }

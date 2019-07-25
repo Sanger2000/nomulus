@@ -21,6 +21,7 @@ import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUti
 import static google.registry.monitoring.blackbox.handlers.SslInitializerTestUtils.signKeyPair;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.TestServers.EchoServer;
 import google.registry.monitoring.blackbox.connection.ExistingChannelAction;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.connection.Protocol;
@@ -74,9 +75,10 @@ public class SslClientInitializerTest {
 
   /** Fake port to test if the SSL engine gets the correct peer port. */
   private static final int SSL_PORT = 12345;
+  private static final int TEST_PORT = 8001;
 
   @Rule
-  public NettyRule nettyRule = new NettyRule();
+  public EchoServer echoServer = new EchoServer();
 
   @Parameter(0)
   public SslProvider sslProvider;
@@ -154,26 +156,21 @@ public class SslClientInitializerTest {
   @Test
   public void testFailure_defaultTrustManager_rejectSelfSignedCert() throws Exception {
     SelfSignedCertificate ssc = new SelfSignedCertificate(SSL_HOST);
-    LocalAddress localAddress =
-        new LocalAddress("DEFAULT_TRUST_MANAGER_REJECT_SELF_SIGNED_CERT_" + sslProvider);
-    nettyRule.setUpServer(localAddress, getServerHandler(ssc.key(), ssc.cert()));
-    SslClientInitializer<LocalChannel> sslClientInitializer =
-        new SslClientInitializer<>(sslProvider);
+    echoServer.setUpServer(TEST_PORT, getServerHandler(ssc.key(), ssc.cert()));
+    SslClientInitializer sslClientInitializer =
+        new SslClientInitializer(sslProvider);
 
     setupProbingAction(new EmbeddedChannel());
-    nettyRule.setUpClient(localAddress, probingAction, sslClientInitializer);
+    echoServer.setUpClient(TEST_PORT, probingAction, sslClientInitializer);
     // The connection is now terminated, both the client side and the server side should get
     // exceptions.
-    nettyRule.assertThatClientRootCause().isInstanceOf(CertPathBuilderException.class);
-    nettyRule.assertThatServerRootCause().isInstanceOf(SSLException.class);
-    assertThat(nettyRule.getChannel().isActive()).isFalse();
+    echoServer.assertThatClientRootCause().isInstanceOf(CertPathBuilderException.class);
+    echoServer.assertThatServerRootCause().isInstanceOf(SSLException.class);
+    assertThat(echoServer.getChannel().isActive()).isFalse();
   }
 
   @Test
   public void testSuccess_customTrustManager_acceptCertSignedByTrustedCa() throws Exception {
-    LocalAddress localAddress =
-        new LocalAddress("CUSTOM_TRUST_MANAGER_ACCEPT_CERT_SIGNED_BY_TRUSTED_CA_" + sslProvider);
-
     // Generate a new key pair.
     KeyPair keyPair = getKeyPair();
 
@@ -183,17 +180,17 @@ public class SslClientInitializerTest {
 
     // Set up the server to use the signed cert and private key to perform handshake;
     PrivateKey privateKey = keyPair.getPrivate();
-    nettyRule.setUpServer(localAddress, getServerHandler(privateKey, cert));
+    echoServer.setUpServer(TEST_PORT, getServerHandler(privateKey, cert));
 
     // Set up the client to trust the self signed cert used to sign the cert that server provides.
     SslClientInitializer<LocalChannel> sslClientInitializer =
         new SslClientInitializer<>(sslProvider, new X509Certificate[] {ssc.cert()});
 
     setupProbingAction(new EmbeddedChannel());
-    nettyRule.setUpClient(localAddress, probingAction, sslClientInitializer);
+    echoServer.setUpClient(TEST_PORT, probingAction, sslClientInitializer);
 
-    setUpSslChannel(nettyRule.getChannel(), cert);
-    nettyRule.assertThatMessagesWork();
+    setUpSslChannel(echoServer.getChannel(), cert);
+    echoServer.assertThatMessagesWork();
 
     // Verify that the SNI extension is sent during handshake.
     assertThat(sniHostReceived).isEqualTo(SSL_HOST);
@@ -201,9 +198,6 @@ public class SslClientInitializerTest {
 
   @Test
   public void testFailure_customTrustManager_wrongHostnameInCertificate() throws Exception {
-    LocalAddress localAddress =
-        new LocalAddress("CUSTOM_TRUST_MANAGER_WRONG_HOSTNAME_" + sslProvider);
-
     // Generate a new key pair.
     KeyPair keyPair = getKeyPair();
 
@@ -213,21 +207,21 @@ public class SslClientInitializerTest {
 
     // Set up the server to use the signed cert and private key to perform handshake;
     PrivateKey privateKey = keyPair.getPrivate();
-    nettyRule.setUpServer(localAddress, getServerHandler(privateKey, cert));
+    echoServer.setUpServer(TEST_PORT, getServerHandler(privateKey, cert));
 
     // Set up the client to trust the self signed cert used to sign the cert that server provides.
     SslClientInitializer<LocalChannel> sslClientInitializer =
         new SslClientInitializer<>(sslProvider, new X509Certificate[] {ssc.cert()});
 
     setupProbingAction(new EmbeddedChannel());
-    nettyRule.setUpClient(localAddress, probingAction, sslClientInitializer);
+    echoServer.setUpClient(TEST_PORT, probingAction, sslClientInitializer);
 
     // When the client rejects the server cert due to wrong hostname, both the client and server
     // should throw exceptions.
-    nettyRule.assertThatClientRootCause().isInstanceOf(CertificateException.class);
-    nettyRule.assertThatClientRootCause().hasMessageThat().contains(SSL_HOST);
-    nettyRule.assertThatServerRootCause().isInstanceOf(SSLException.class);
-    assertThat(nettyRule.getChannel().isActive()).isFalse();
+    echoServer.assertThatClientRootCause().isInstanceOf(CertificateException.class);
+    echoServer.assertThatClientRootCause().hasMessageThat().contains(SSL_HOST);
+    echoServer.assertThatServerRootCause().isInstanceOf(SSLException.class);
+    assertThat(echoServer.getChannel().isActive()).isFalse();
   }
 }
 

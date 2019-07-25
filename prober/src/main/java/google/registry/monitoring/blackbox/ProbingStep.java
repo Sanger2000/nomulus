@@ -40,7 +40,7 @@ import org.joda.time.Duration;
  *
  * <p>Subclasses specify {@link Protocol} and {@link OutboundMessageType} of the {@link ProbingStep}</p>
  */
-public abstract class ProbingStep<C extends AbstractChannel> implements Consumer<Token> {
+public abstract class ProbingStep implements Consumer<Token> {
 
   public static final LocalAddress DEFAULT_ADDRESS = new LocalAddress("DEFAULT_ADDRESS_CHECKER");
   protected static final Duration DEFAULT_DURATION = new Duration(4000L);
@@ -51,8 +51,8 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
 
   /** Necessary boolean to inform when to obtain next {@link Token}*/
   private boolean isLastStep = false;
-  private ProbingStep<C> nextStep;
-  private ProbingSequence<C> parent;
+  private ProbingStep nextStep;
+  private ProbingSequence parent;
 
   protected Duration duration;
 
@@ -77,15 +77,15 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
     isLastStep = true;
   }
 
-  void nextStep(ProbingStep<C> step) {
+  void nextStep(ProbingStep step) {
     this.nextStep = step;
   }
 
-  ProbingStep<C> nextStep() {
+  ProbingStep nextStep() {
     return this.nextStep;
   }
 
-  ProbingStep<C> parent(ProbingSequence<C> parent) {
+  ProbingStep parent(ProbingSequence parent) {
     this.parent = parent;
     return this;
   }
@@ -96,6 +96,8 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
 
     OutboundMessageType message = token.modifyMessage(message());
 
+    System.out.println(protocol().persistentConnection());
+    System.out.println(token.channel());
     //Depending on whether token passes a channel, we make a NewChannelAction or ExistingChannelAction
     if (protocol().persistentConnection() && token.channel() != null) {
       generatedAction = ExistingChannelAction.builder()
@@ -106,13 +108,12 @@ public abstract class ProbingStep<C extends AbstractChannel> implements Consumer
           .channel(token.channel())
           .build();
     } else {
-      generatedAction = NewChannelAction.<C>builder()
+      generatedAction = NewChannelAction.builder()
           .delay(duration)
           .protocol(protocol())
           .outboundMessage(message)
           .host(token.getHost())
           .bootstrap(parent.getBootstrap())
-          .address(address)
           .build();
 
     }

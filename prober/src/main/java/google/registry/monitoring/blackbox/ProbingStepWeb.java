@@ -28,7 +28,8 @@ import javax.inject.Inject;
  *
  * <p>Only passes in requisite {@link Protocol} and {@link OutboundMessageType} to parent constructor</p>
  */
-public class ProbingStepWeb<C extends AbstractChannel> extends ProbingStep<C>{
+public class ProbingStepWeb extends ProbingStep{
+
   @Inject
   public ProbingStepWeb(Protocol protocol) {
     super(protocol, new HttpRequestMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, ""));

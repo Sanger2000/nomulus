@@ -43,6 +43,9 @@ import org.joda.time.Duration;
 
 /** Utility class for various helper methods used in testing. */
 public class TestUtils {
+    public static String LOCALHOST = "127.0.0.1";
+    public static int TEST_PORT = 8888;
+
 
   public static FullHttpRequest makeHttpPostRequest(String content, String host, String path) {
     ByteBuf buf = Unpooled.wrappedBuffer(content.getBytes(US_ASCII));
@@ -142,10 +145,22 @@ public class TestUtils {
     public String toString() {
       return message;
     }
+
+    @Override
+    public String name() {
+      return "Test DuplexMessage Action";
+    }
+
+    @Override
+    public DuplexMessageTest modifyMessage(String... args) {
+      assert (args.length == 1);
+      message = args[0];
+      return this;
+    }
   }
 
   /** {@link ProbingStep} subclass that performs probing Steps functions, without time delay */
-  public static class TestStep extends ProbingStep<LocalChannel> {
+  public static class TestStep extends ProbingStep {
 
     public TestStep(Protocol protocol, String testMessage, LocalAddress address) {
       super(protocol, new DuplexMessageTest(testMessage));
@@ -155,7 +170,7 @@ public class TestUtils {
   }
 
   /** {@link ProbingStep} subclass that is solely used to note when the previous {@link ProbingStep} has completed its action */
-  public static class DummyStep extends ProbingStep<LocalChannel> {
+  public static class DummyStep extends ProbingStep {
     private DefaultPromise<Token> future;
 
     public DummyStep(Protocol protocol, EventLoopGroup eventLoopGroup) {
@@ -210,15 +225,10 @@ public class TestUtils {
 
   /** {@link TestToken} instance that passes in existing channel */
   public static class ExistingChannelToken extends TestToken {
-    private Channel channel;
 
     public ExistingChannelToken(Channel channel, String host) {
       super(host);
-      this.channel = channel;
-    }
-    @Override
-    public Channel channel() {
-      return channel;
+      channel(channel);
     }
   }
 
@@ -230,7 +240,7 @@ public class TestUtils {
    * {@link ByteBuf} implementations that hold the content of the HTTP messages are different, even
    * though the actual content, headers, etc are the same.
    *
-   * <p>This method is not type-safe, msg1 & msg2 can be a request and a response, respectively. Do
+   * <p>This method is not type-safe, msg1 & msg2 can be a request and a success, respectively. Do
    * not use this method directly.
    */
   private static void assertHttpMessageEquivalent(HttpMessage msg1, HttpMessage msg2) {

@@ -64,16 +64,16 @@ public class WebWhoisModule {
 
   @Provides
   @HttpWhoisProtocol
-  static ProbingStep<NioSocketChannel> provideHttpWhoisProbingSequence(
+  static ProbingStep provideHttpWhoisProbingSequence(
       @HttpWhoisProtocol Protocol httpWhoisProtocol) {
-    return new ProbingStepWeb<>(httpWhoisProtocol);
+    return new ProbingStepWeb(httpWhoisProtocol);
   }
 
   @Provides
   @HttpsWhoisProtocol
-  static ProbingStep<NioSocketChannel> provideHttpsWhoisProbingStep(
+  static ProbingStep provideHttpsWhoisProbingStep(
       @HttpsWhoisProtocol Protocol httpsWhoisProtocol) {
-    return new ProbingStepWeb<>(httpsWhoisProtocol);
+    return new ProbingStepWeb(httpsWhoisProtocol);
   }
 
 

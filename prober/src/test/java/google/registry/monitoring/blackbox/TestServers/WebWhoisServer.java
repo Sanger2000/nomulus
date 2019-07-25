@@ -14,6 +14,7 @@
 
 package google.registry.monitoring.blackbox.TestServers;
 
+import static google.registry.monitoring.blackbox.TestUtils.LOCALHOST;
 import static google.registry.monitoring.blackbox.TestUtils.makeHttpResponse;
 import static google.registry.monitoring.blackbox.TestUtils.makeRedirectResponse;
 
@@ -35,42 +36,47 @@ import io.netty.handler.codec.http.HttpServerCodec;
  * {@link TestServer} subtype that performs WebWhois Services Expected
  *
  * <p>It will either redirect the client to the correct location if given the
- * requisite redirect input, give the client a successful response if they give
+ * requisite redirect input, give the client a successful success if they give
  * the expected final destination, or give the client an error message if given
  * an unexpected host location</p>
  */
 public class WebWhoisServer extends TestServer {
 
-  public WebWhoisServer(LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
-    super(localAddress, handlers);
+  private WebWhoisServer() {
+    super();
+  }
+  private WebWhoisServer(EventLoopGroup eventLoopGroup) {
+    super(eventLoopGroup);
   }
 
-  public WebWhoisServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, ImmutableList<? extends ChannelHandler> handlers) {
-    super(eventLoopGroup, localAddress, handlers);
+  @Override
+  protected void setupServer(int port, ImmutableList<? extends ChannelHandler> handlers) {
+    super.setupServer(port, handlers);
   }
 
   /** Creates server that doesn't deal with {@link ByteBuf} conversion and just sends the HttpRequestMessage object through pipeline */
-  public static WebWhoisServer strippedServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, String redirectInput, String destinationInput) {
-    return new WebWhoisServer(
-        eventLoopGroup,
-        localAddress,
-        ImmutableList.of(new RedirectHandler(redirectInput, destinationInput))
-    );
+  public static WebWhoisServer strippedServer(EventLoopGroup eventLoopGroup, int port, String redirectInput, String destinationInput) {
+    WebWhoisServer strippedServer = new WebWhoisServer(eventLoopGroup);
+    strippedServer.setupServer(port, ImmutableList.of(new RedirectHandler(redirectInput, destinationInput)));
+    return strippedServer;
   }
-  /** Creates server that sends exactly what we expect a remote server to send as a response, by sending the {@link ByteBuf} of the response through pipeline */
-  public static WebWhoisServer fullServer(EventLoopGroup eventLoopGroup, LocalAddress localAddress, String redirectInput, String destinationInput) {
-    return new WebWhoisServer(
-        eventLoopGroup,
-        localAddress,
+  /** Creates server that sends exactly what we expect a remote server to send as a success, by sending the {@link ByteBuf} of the success through pipeline */
+  public static WebWhoisServer fullServer(EventLoopGroup eventLoopGroup, int port, String redirectInput, String destinationInput) {
+    WebWhoisServer strippedServer = new WebWhoisServer(eventLoopGroup);
+    strippedServer.setupServer(
+        port,
         ImmutableList.of(
             new HttpServerCodec(),
             new HttpObjectAggregator(1048576),
-            new RedirectHandler(redirectInput, destinationInput))
+            new RedirectHandler(redirectInput, destinationInput)
+        )
     );
+
+    return strippedServer;
   }
 
   /**
-   * Handler that will wither redirect client, give successful response, or give error messge
+   * Handler that will wither redirect client, give successful success, or give error messge
    */
   @Sharable
   static class RedirectHandler extends ChannelDuplexHandler {
@@ -80,7 +86,7 @@ public class WebWhoisServer extends TestServer {
     /**
      *
      * @param redirectInput - Server will send back redirect to {@code destinationInput} when receiving a request with this host location
-     * @param destinationInput - Server will send back an {@link HttpResponseStatus.OK} response when receiving a request with this host location
+     * @param destinationInput - Server will send back an {@link HttpResponseStatus.OK} success when receiving a request with this host location
      */
     public RedirectHandler(String redirectInput, String destinationInput) {
       this.redirectInput = redirectInput;
@@ -90,11 +96,12 @@ public class WebWhoisServer extends TestServer {
     /** Reads input {@link HttpRequest}, and creates appropriate {@link HttpResponseMessage} based on what header location is */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+      System.out.println("test1");
       HttpRequest request = (HttpRequest) msg;
       HttpResponse response;
-      if (request.headers().get("host").equals(redirectInput)) {
-        response = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.MOVED_PERMANENTLY, destinationInput, true, false));
-      } else if (request.headers().get("host").equals(destinationInput)) {
+      if (request.uri().equals(redirectInput)) {
+        response = HttpResponseMessage.fromResponse(makeRedirectResponse(HttpResponseStatus.MOVED_PERMANENTLY, LOCALHOST + "/" + destinationInput, true, false));
+      } else if (request.uri().equals(destinationInput)) {
         response = HttpResponseMessage.fromResponse(makeHttpResponse(HttpResponseStatus.OK));
       } else {
         response = HttpResponseMessage.fromResponse(makeHttpResponse(HttpResponseStatus.BAD_REQUEST));

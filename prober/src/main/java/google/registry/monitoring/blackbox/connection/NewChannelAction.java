@@ -26,20 +26,16 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
  *Subclass of {@link ProbingAction} that creates a new {@link Channel} based on its parameters
  *
- * @param <C> For testing Purposes to use different kinds of channels (other than NioSocketChannel)
- * Subclass of ProbingAction where each instance creates a new channel
  */
 @AutoValue
-public abstract class NewChannelAction<C extends AbstractChannel> extends ProbingAction {
+public abstract class NewChannelAction extends ProbingAction {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** {@link LocalAddress} for connection. ONLY FOR TESTING*/
-  public abstract LocalAddress address();
 
   /** {@link Channel} created from bootstrap connection to protocol's specified host and port*/
   private Channel channel;
@@ -55,7 +51,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
 
 
   @Override
-  public abstract Builder<C> toBuilder();
+  public abstract Builder toBuilder();
 
   /**
    * Creates channel from {@link Bootstrap} and {@link Bootstrap} given to instance
@@ -69,10 +65,9 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
     //Calls on bootstrap method
     Bootstrap bootstrap = bootstrap();
     bootstrap.handler(
-        new ChannelInitializer<C>() {
+        new ChannelInitializer<NioSocketChannel>() {
           @Override
-          protected void initChannel(C outboundChannel)
-              throws Exception {
+          protected void initChannel(NioSocketChannel outboundChannel) {
             //Uses Handlers from Protocol to fill pipeline
             addHandlers(outboundChannel.pipeline(), protocol().handlerProviders());
           }
@@ -83,13 +78,7 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
     logger.atInfo().log("Initialized bootstrap with channel Handlers");
     //ChannelFuture that performs action when connection is established
 
-    ChannelFuture connectionFuture;
-
-    if (address() == DEFAULT_ADDRESS) {
-      connectionFuture = bootstrap.connect(host(), protocol().port());
-    } else {
-      connectionFuture = bootstrap.connect(address());
-    }
+    ChannelFuture connectionFuture = bootstrap.connect(host(), protocol().port());
 
     //ChannelPromise that we return
     ChannelPromise finished = connectionFuture.channel().newPromise();
@@ -117,17 +106,15 @@ public abstract class NewChannelAction<C extends AbstractChannel> extends Probin
     return finished;
   }
 
-  public static <C extends AbstractChannel> NewChannelAction.Builder<C> builder() {
-    return new AutoValue_NewChannelAction.Builder<C>().path("");
+  public static NewChannelAction.Builder builder() {
+    return new AutoValue_NewChannelAction.Builder().path("");
   }
 
 
   @AutoValue.Builder
-  public static abstract class Builder<C extends AbstractChannel> extends ProbingAction.Builder<Builder<C>, NewChannelAction<C>> {
+  public static abstract class Builder extends ProbingAction.Builder<Builder, NewChannelAction> {
     //specifies bootstrap in this builder
-    public abstract NewChannelAction.Builder<C> bootstrap(Bootstrap value);
-
-    public abstract NewChannelAction.Builder<C> address(LocalAddress value);
+    public abstract NewChannelAction.Builder bootstrap(Bootstrap value);
 
   }
 

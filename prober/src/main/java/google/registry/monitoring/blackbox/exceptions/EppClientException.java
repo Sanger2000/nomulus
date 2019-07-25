@@ -15,7 +15,8 @@
 package google.registry.monitoring.blackbox.exceptions;
 
 /**
- * Base exception class for all instances when the Status of the task performed is ERROR
+ * Subclass of {@link InternalException} that represents an internal fault in processing
+ * EPP responses or creating EPP requests.
  */
 public class EppClientException extends InternalException {
 

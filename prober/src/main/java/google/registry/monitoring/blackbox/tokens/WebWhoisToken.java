@@ -41,7 +41,7 @@ public class WebWhoisToken extends Token {
   @Override
   public OutboundMessageType modifyMessage(OutboundMessageType original) {
     HttpRequestMessage request = (HttpRequestMessage) original;
-    request.headers().set("host", host);
+    request.modifyMessage(getHost());
 
     return request;
   }

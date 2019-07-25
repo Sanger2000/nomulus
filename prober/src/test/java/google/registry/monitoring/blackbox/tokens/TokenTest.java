@@ -64,7 +64,7 @@ public class TokenTest {
   @Test
   public void testEppToken_MessageModificationSuccess() throws InternalException, IOException {
     EppRequestMessage originalMessage = new EppRequestMessage.CREATE();
-    String domainName = ((EppToken)eppToken).getDomainName();
+    String domainName = ((EppToken)eppToken).getCurrentDomainName();
     String clTRID = domainName.substring(0, domainName.indexOf('.'));
 
     EppRequestMessage modifiedMessage = (EppRequestMessage) eppToken.modifyMessage(originalMessage);

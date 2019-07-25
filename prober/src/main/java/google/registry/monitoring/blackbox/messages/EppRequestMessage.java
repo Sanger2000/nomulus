@@ -15,37 +15,59 @@
 
 package google.registry.monitoring.blackbox.messages;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Internal;
 import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
-import google.registry.monitoring.blackbox.modules.EppModule.EppProtocol;
+import google.registry.monitoring.blackbox.tokens.Token;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.io.IOException;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Named;
-import org.w3c.dom.Document;
 
+/**
+ * {@link EppMessage} subclass that implements {@link OutboundMessageType}, which represents
+ * an outbound Epp message.
+ *
+ * <p>There are 7 specific types of this {@link EppRequestMessage}, which represent the 7
+ * basic commands of EPP that we are probing, or are necessary to perform. They are:
+ * HELLO, LOGIN, CREATE, CHECK, CLAIMSCHECK, DELETE, and LOGOUT</p>
+ *
+ * <p>Stores a clTRID which is modified each time the token calls {@code modifyMessage}</p>
+ */
 public abstract class EppRequestMessage extends EppMessage implements OutboundMessageType {
 
-  private final static String DOMAIN_KEY = "//domainns:name";
-  private final static String CLIENT_ID_KEY = "//eppns:clID";
-  private final static String CLIENT_PASSWORD_KEY = "//eppns:pw";
-  private final static String CLIENT_TRID_KEY = "//eppns:clTRID";
+  public final static String DOMAIN_KEY = "//domainns:name";
+  public final static String CLIENT_ID_KEY = "//eppns:clID";
+  public final static String CLIENT_PASSWORD_KEY = "//eppns:pw";
+  public final static String CLIENT_TRID_KEY = "//eppns:clTRID";
 
   protected ImmutableMap<String, String> replacements;
   protected String clTRID;
   private String template;
 
 
-  public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
-    this.clTRID = clTRID;
+  /**
+   * From the input clTRID and domainName, modifies the template EPP XML document
+   * to reflect new parameters.
+   *
+   * @param args - should always be two Strings: First one is {@code clTRID},
+   * Second one is {@code domainName}
+   *
+   * @return the current {@link EppRequestMessage} instance
+   *
+   * @throws InternalException - On the occasion that the prober can't appropriately
+   * modify the EPP XML document, the blame falls on the prober, not the server, so it
+   * throws an {@link InternalException}
+   */
+  @Override
+  public EppRequestMessage modifyMessage(String... args) throws InternalException {
+    this.clTRID = args[0];
+    String domain = args[1];
     Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
         .putAll(replacements)
-        .put(DOMAIN_KEY, newDomain)
+        .put(DOMAIN_KEY, domain)
         .put(CLIENT_TRID_KEY, clTRID)
         .build();
     try {
@@ -86,7 +108,7 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain){
+    public EppRequestMessage modifyMessage(String... args){
       return this;
     }
 
@@ -111,8 +133,8 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String domainName) throws InternalException {
-      this.clTRID = clTRID;
+    public EppRequestMessage modifyMessage(String... args) throws InternalException {
+      this.clTRID = args[0];
       Map<String, String> nextArguments = ImmutableMap.<String, String>builder()
           .putAll(replacements)
           .put(CLIENT_TRID_KEY, clTRID)
@@ -208,8 +230,8 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     }
 
     @Override
-    public EppRequestMessage modifyMessage(String clTRID, String newDomain) throws InternalException {
-      this.clTRID = clTRID;
+    public EppRequestMessage modifyMessage(String... args) throws InternalException {
+      this.clTRID = args[0];
       try {
         message = getEppDocFromTemplate(template, ImmutableMap.of(CLIENT_TRID_KEY, clTRID));
       } catch (IOException | EppClientException e) {
