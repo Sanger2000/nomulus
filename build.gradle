@@ -13,7 +13,7 @@
 // limitations under the License.
 
 buildscript {
-  if (project.disableDependencyLocking.toBoolean() == false) {
+  if (rootProject.enableDependencyLocking.toBoolean()) {
     // Lock buildscript dependencies.
     configurations.classpath {
       resolutionStrategy.activateDependencyLocking()
@@ -46,6 +46,10 @@ plugins {
   id 'com.diffplug.gradle.spotless' version '3.18.0'
 }
 
+wrapper {
+  distributionType = Wrapper.DistributionType.ALL
+}
+
 apply plugin: google.registry.gradle.plugin.ReportUploaderPlugin
 
 reportUploader {
@@ -71,7 +75,7 @@ reportUploader {
 
 apply from: 'dependencies.gradle'
 
-apply from: 'dependency_license.gradle'
+apply from: 'dependency_lic.gradle'
 
 // Custom task to run checkLicense in buildSrc, which is not triggered
 // by root project tasks. A shell task is used because buildSrc tasks
@@ -165,7 +169,7 @@ subprojects {
     }
   }
 
-  if (rootProject.disableDependencyLocking.toBoolean() == false) {
+  if (rootProject.enableDependencyLocking.toBoolean()) {
     buildscript {
       // Lock buildscript dependencies.
       configurations.classpath {
@@ -173,7 +177,7 @@ subprojects {
       }
     }
     // Lock application dependencies except for the gradle-license-report
-    // plugin. See dependency_license.gradle for more information.
+    // plugin. See dependency_lic.gradle for more information.
     configurations.findAll { it.name != 'dependencyLicenseReport' }.each {
       it.resolutionStrategy.activateDependencyLocking()
     }
