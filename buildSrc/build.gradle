@@ -13,7 +13,7 @@
 // limitations under the License.
 
 buildscript {
-  if (rootProject.disableDependencyLocking.toBoolean() == false) {
+  if (project.enableDependencyLocking.toBoolean()) {
     // Lock buildscript dependencies.
     configurations.classpath {
       resolutionStrategy.activateDependencyLocking()
@@ -32,7 +32,7 @@ plugins {
   id 'com.diffplug.gradle.spotless' version '3.18.0'
 }
 
-if (rootProject.disableDependencyLocking.toBoolean() == false) {
+if (rootProject.enableDependencyLocking.toBoolean()) {
   // Lock application dependencies.
   dependencyLocking {
     lockAllConfigurations()
@@ -52,7 +52,7 @@ repositories {
 }
 
 apply from: '../dependencies.gradle'
-apply from: '../dependency_license.gradle'
+apply from: '../dependency_lic.gradle'
 apply from: '../java_common.gradle'
 
 sourceSets {
@@ -87,5 +87,23 @@ dependencies {
 gradle.projectsEvaluated {
   tasks.withType(JavaCompile) {
     options.compilerArgs << "-Xlint:unchecked"
+  }
+}
+
+task exportDenpendencies {
+  def outputFileProperty = 'dependencyExportFile'
+  def output = project.hasProperty(outputFileProperty)
+      ? new PrintStream(
+          new File(project.getProperty(outputFileProperty)))
+      : System.out
+
+  doLast {
+    project.configurations.all {
+      it.dependencies.findAll {
+        it.group != null
+      }.each {
+        output.println("${it.group}:${it.name}")
+      }
+    }
   }
 }
