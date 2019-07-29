@@ -76,6 +76,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
       throws ResponseException, InternalException {
 
     status = ResponseType.SUCCESS;
+    ctx.fireChannelRead(status);
 
     if (!finished.isSuccess()) {
       finished.setSuccess();
@@ -97,6 +98,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
       //On ResponseException, we know the response is a failure. As a result,
       //we set the status to FAILURE, then inform the MetricsHandler of this
       status = ResponseType.FAILURE;
+      ctx.fireChannelRead(status);
 
       //Since it wasn't a success, we still want to log to see what caused the FAILURE
       logger.atInfo().log(cause.getMessage());
@@ -108,6 +110,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
       //On ConnectionException, we know the response type is an error. As a result,
       //we set the status to ERROR, then inform the MetricsHandler of this
       status = ResponseType.ERROR;
+      ctx.fireChannelRead(status);
 
       //Since it wasn't a success, we still log what caused the ERROR
       logger.atInfo().log(cause.getMessage());
@@ -133,6 +136,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
       //so we treat it as such:
 
       status = ResponseType.ERROR;
+      ctx.fireChannelRead(status);
 
       logger.atInfo().log(cause.getMessage());
       finished.setSuccess();
