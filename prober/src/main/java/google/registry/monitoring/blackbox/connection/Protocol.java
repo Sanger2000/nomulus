@@ -29,15 +29,15 @@ public abstract class Protocol {
   /** {@link AttributeKey} that lets channel reference {@link Protocol} that created it. */
   public static final AttributeKey<Protocol> PROTOCOL_KEY = AttributeKey.valueOf("PROTOCOL_KEY");
 
-  abstract String name();
+  public abstract String name();
 
   public abstract int port();
 
   /** The {@link ChannelHandler} providers to use for the protocol, in order. */
-  abstract ImmutableList<Provider<? extends ChannelHandler>> handlerProviders();
+  public abstract ImmutableList<Provider<? extends ChannelHandler>> handlerProviders();
 
   /** Boolean that notes if connection associated with Protocol is persistent.*/
-  abstract boolean persistentConnection();
+  public abstract boolean persistentConnection();
 
   public static Builder builder() {
     return new AutoValue_Protocol.Builder();

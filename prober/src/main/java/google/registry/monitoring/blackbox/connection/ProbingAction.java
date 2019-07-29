@@ -232,7 +232,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
     abstract Protocol protocol();
 
-    abstract Channel channel();
+    abstract Optional<Channel> channel();
 
     abstract SocketAddress address();
 
@@ -247,9 +247,9 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
         //If no address has been supplied, we set it based on the host and port
         setAddress(new InetSocketAddress(host(), protocol().port()));
 
-      if (protocol().persistentConnection() && channel() != null) {
+      if (protocol().persistentConnection() && channel().isPresent()) {
         //if a channel exists and we want to use it then we don't try to create one
-        setConnectionFuture(channel().newSucceededFuture());
+        setConnectionFuture(channel().get().newSucceededFuture());
       } else {
         //otherwise, we must have a bootstrap present
         assert(bootstrap().isPresent());

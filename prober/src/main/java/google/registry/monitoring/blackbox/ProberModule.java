@@ -18,6 +18,7 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.modules.CertificateModule;
 import google.registry.monitoring.blackbox.modules.EppModule;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
@@ -27,6 +28,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslProvider;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import org.joda.time.Duration;
 
@@ -75,12 +77,16 @@ public class ProberModule {
       modules = {
           ProberModule.class,
           WebWhoisModule.class,
-          EppModule.class
+          EppModule.class,
+          CertificateModule.class
       })
   public interface ProberComponent {
 
     //Standard WebWhois sequence
     @WebWhoisProtocol ProbingSequence provideWebWhoisSequence();
 
+    @Named("eppLoginLogout") ProbingSequence provideBasicEppSequence();
+
+    @Named("eppLoginCreateDeleteLogout") ProbingSequence provideMediumEppSequence();
   }
 }

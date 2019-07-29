@@ -23,14 +23,10 @@ import static google.registry.util.ResourceUtils.readResourceUtf8;
 
 import google.registry.monitoring.blackbox.ProbingSequence;
 import google.registry.monitoring.blackbox.ProbingStep;
-import google.registry.monitoring.blackbox.ProbingStepEpp;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.EppActionHandler;
 import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
-import google.registry.monitoring.blackbox.handlers.MessageHandler;
-import google.registry.monitoring.blackbox.handlers.MetricsHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
-import google.registry.monitoring.blackbox.handlers.TimerHandler;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
 import google.registry.monitoring.blackbox.tokens.EppToken;
@@ -51,7 +47,7 @@ import org.joda.time.Duration;
 @Module
 public class EppModule {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final int EPP_PORT = 700;
 
   private static final String EPP_PROTOCOL_NAME = "epp";
 
@@ -63,9 +59,9 @@ public class EppModule {
   public @interface EppProtocol {}
 
   @Provides
-  @Named("Epp-Login-Logout")
+  @Named("eppLoginLogout")
   static ProbingSequence provideEppLoginLogoutProbingSequence(
-      EppToken token,
+      EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
       @Named("Hello") ProbingStep.Builder helloStepBuilder,
       @Named("Login") ProbingStep.Builder loginStepBuilder,
@@ -80,9 +76,9 @@ public class EppModule {
   }
 
   @Provides
-  @Named("Epp-Login-Create-Delete-Logout")
+  @Named("eppLoginCreateDeleteLogout")
   static ProbingSequence provideEppLoginCreateDeleteLogoutProbingSequence(
-      EppToken token,
+      EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
       @Named("Hello") ProbingStep.Builder helloStepBuilder,
       @Named("Login") ProbingStep.Builder loginStepBuilder,
@@ -140,7 +136,7 @@ public class EppModule {
   @Provides
   @Named("Delete")
   static ProbingStep.Builder provideEppDeleteStepBuilder(
-      @EppProtocol Protocol eppProtocol,,
+      @EppProtocol Protocol eppProtocol,
       Duration duration,
       EppRequestMessage.DELETE deleteRequest) {
     return ProbingStep.builder()
@@ -201,38 +197,33 @@ public class EppModule {
     return new SslClientInitializer<>(sslProvider, privateKeyProvider, certificatesProvider);
   }
 
-  /** {@link Provides} the {@link Bootstrap} used by the WebWhois sequence. */
-  @Singleton
   @Provides
-  @WebWhoisProtocol
-  static Bootstrap provideBootstrap(EventLoopGroup eventLoopGroup) {
-    return new Bootstrap()
-        .group(eventLoopGroup)
-        .channel(NioSocketChannel.class);
-  }
-
-
-  @Provides
-  @Named("epp_user_id")
+  @Named("eppUserId")
   static String provideEppUserId() {
     return readResourceUtf8(EppModule.class, "secrets/user_id.txt");
   }
 
   @Provides
-  @Named("epp_password")
+  @Named("eppPassword")
   static String provideEppPassphrase() {
     return readResourceUtf8(EppModule.class, "secrets/password.txt");
   }
 
   @Provides
-  @Named("Epp-Host")
+  @Named("eppHost")
   static String provideEppHost() {
     return readResourceUtf8(EppModule.class, "secrets/epp_host.txt");
   }
 
   @Provides
-  @Named("Epp-Tld")
+  @Named("eppTld")
   static String provideTld() {
     return "oa-0.test";
+  }
+
+  @Provides
+  @EppProtocol
+  static int provideEppPort() {
+    return EPP_PORT;
   }
 }
