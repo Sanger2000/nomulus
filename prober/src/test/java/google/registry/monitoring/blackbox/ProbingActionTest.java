@@ -21,6 +21,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
 import google.registry.monitoring.blackbox.handlers.ConversionHandler;
