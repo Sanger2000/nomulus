@@ -17,9 +17,14 @@ package google.registry.monitoring.blackbox;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.modules.EppModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslProvider;
 import javax.inject.Singleton;
@@ -49,6 +54,14 @@ public class ProberModule {
     return DEFAULT_DURATION;
   }
 
+  /** {@link Provides} general {@link Bootstrap} for which a new instance is provided in any {@link ProbingSequence}. */
+  @Provides
+  Bootstrap provideBootstrap(EventLoopGroup eventLoopGroup) {
+    return new Bootstrap()
+        .group(eventLoopGroup)
+        .channel(NioSocketChannel.class);
+  }
+
   /** {@link Provides} the {@link SslProvider} used by instances of {@link google.registry.monitoring.blackbox.handlers.SslClientInitializer} */
   @Provides
   static SslProvider provideSslProvider() {
@@ -62,6 +75,7 @@ public class ProberModule {
       modules = {
           ProberModule.class,
           WebWhoisModule.class,
+          EppModule.class
       })
   public interface ProberComponent {
 

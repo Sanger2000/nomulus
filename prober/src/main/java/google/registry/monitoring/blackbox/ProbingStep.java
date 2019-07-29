@@ -16,6 +16,8 @@ package google.registry.monitoring.blackbox;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.tokens.Token;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
@@ -43,7 +45,7 @@ public abstract class ProbingStep implements Consumer<Token> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Necessary boolean to inform when to obtain next {@link Token}*/
-  private boolean isLastStep = false;
+  protected boolean isLastStep = false;
   private ProbingStep nextStep;
 
   abstract Duration duration();

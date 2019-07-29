@@ -16,11 +16,11 @@ package google.registry.monitoring.blackbox.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.exceptions.ConnectionException;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.exceptions.ResponseException;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
-import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,7 +33,7 @@ import io.netty.channel.ChannelPromise;
  * messages that implement the {@link InboundMessageType} interface.</p>
  *
  * <p> The {@link ActionHandler} skeleton exists for a few main purposes. First, it returns a {@link ChannelPromise},
- * which informs the {@link google.registry.monitoring.blackbox.ProbingAction} in charge that a response has been read.
+ * which informs the {@link ProbingAction} in charge that a response has been read.
  * Second, with any exception thrown, the connection is closed, and the ProbingAction governing this channel is informed
  * of the error, lastly, given the type of error, the status of the {@link ResponseType} is marked as a {@code FAILURE}
  * or {@code ERROR}. If no exception is thrown and the message reached {@code channelRead0}, then it is marked as {@code SUCCESS}.</p>
@@ -50,10 +50,10 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   /** Status of response for current {@link ActionHandler} instance */
   private static ResponseType status;
 
-  /** {@link ChannelPromise} that informs {@link google.registry.monitoring.blackbox.ProbingAction} if response has been received. */
+  /** {@link ChannelPromise} that informs {@link ProbingAction} if response has been received. */
   protected ChannelPromise finished;
 
-  /** Returns initialized {@link ChannelPromise} to {@link google.registry.monitoring.blackbox.ProbingAction}.*/
+  /** Returns initialized {@link ChannelPromise} to {@link ProbingAction}.*/
   public ChannelFuture getFuture() {
     return finished;
   }
@@ -84,7 +84,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
 
   /**
    * Logs the channel and pipeline that caused error, closes channel, then informs
-   * {@link google.registry.monitoring.blackbox.ProbingAction} listeners of error.
+   * {@link ProbingAction} listeners of error.
    */
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {

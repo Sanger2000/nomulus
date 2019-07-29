@@ -15,11 +15,9 @@
 package google.registry.monitoring.blackbox.tokens;
 
 import com.google.common.collect.ImmutableList;
-import google.registry.monitoring.blackbox.WebWhoisModule.WebWhoisProtocol;
+import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
-import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
-import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
 
