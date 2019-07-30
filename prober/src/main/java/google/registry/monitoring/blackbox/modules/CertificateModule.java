@@ -17,7 +17,7 @@ package google.registry.monitoring.blackbox.modules;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Suppliers.memoizeWithExpiration;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static google.registry.util.ResourceUtils.readResourceStream;
+import static google.registry.util.ResourceUtils.readResourceBytes;
 import static google.registry.util.ResourceUtils.readResourceUtf8;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -59,7 +59,7 @@ public class CertificateModule {
 
   private static InputStream readResource(String filename)
       throws IOException {
-    return readResourceStream(CertificateModule.class, filename);
+    return readResourceBytes(CertificateModule.class, filename).openStream();
   }
 
   @Singleton

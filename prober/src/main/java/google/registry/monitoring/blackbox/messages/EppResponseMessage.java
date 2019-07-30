@@ -94,7 +94,7 @@ public abstract class EppResponseMessage extends EppMessage implements InboundMe
     public void decode() throws ResponseException {
       verifyEppResponse(
           message,
-          ImmutableList.of(),
+          ImmutableList.of("//eppns:greeting"),
           true);
     }
 

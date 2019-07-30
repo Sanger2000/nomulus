@@ -17,9 +17,7 @@ package google.registry.monitoring.blackbox.messages;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static google.registry.util.ResourceUtils.readResourceStream;
-
-
+import static google.registry.util.ResourceUtils.readResourceBytes;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
@@ -150,7 +148,7 @@ public class EppMessage {
 
   private static InputStream readResource(String filename)
       throws IOException {
-    return readResourceStream(EppMessage.class, filename);
+    return readResourceBytes(EppMessage.class, filename).openStream();
   }
 
 
@@ -246,6 +244,7 @@ public class EppMessage {
    */
   protected static void verifyEppResponse(Document xml, List<String> expressions, boolean validate)
       throws ResponseException {
+    System.out.println(expressions);
     if (validate) {
       try {
         eppValidate(xml);
