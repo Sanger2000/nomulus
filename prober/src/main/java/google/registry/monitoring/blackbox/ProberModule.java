@@ -88,5 +88,7 @@ public class ProberModule {
     @Named("eppLoginLogout") ProbingSequence provideBasicEppSequence();
 
     @Named("eppLoginCreateDeleteLogout") ProbingSequence provideMediumEppSequence();
+
+    @Named("eppLoginCreateCheckDeleteCheckLogout") ProbingSequence provideAdvancedEppSequence();
   }
 }

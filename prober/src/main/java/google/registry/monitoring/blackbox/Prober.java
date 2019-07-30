@@ -28,7 +28,7 @@ public class Prober {
   public static void main(String[] args) {
 
     //Obtains WebWhois Sequence provided by proberComponent
-    ProbingSequence eppSequence = proberComponent.provideMediumEppSequence();
+    ProbingSequence eppSequence = proberComponent.provideAdvancedEppSequence();
 
     //Tells Sequence to start running
     eppSequence.start();
