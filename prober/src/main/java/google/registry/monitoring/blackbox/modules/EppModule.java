@@ -26,12 +26,7 @@ import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.handlers.EppActionHandler;
 import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.CheckSuccess;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Create;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Delete;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Hello;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Login;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Logout;
+import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.tokens.EppToken;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
@@ -45,29 +40,28 @@ import javax.inject.Qualifier;
 import javax.inject.Singleton;
 import org.joda.time.Duration;
 
-/** A module that provides the {@link Protocol}s to send HTTP(S) web WHOIS requests. */
+/** A module that provides the components necessary for and the overall
+ * {@link ProbingSequence} to probe EPP. */
 @Module
 public class EppModule {
 
   private static final int EPP_PORT = 700;
-
   private static final String EPP_PROTOCOL_NAME = "epp";
 
 
-  /**
-   * Dagger qualifier to provide EPP protocol related handlers and other bindings.
-   */
+  /** Dagger qualifier to provide EPP protocol related handlers and other bindings. */
   @Qualifier
   public @interface EppProtocol {}
 
+  /** Dagger provided {@link ProbingSequence} that probes EPP login and logout actions. */
   @Provides
   @Named("eppLoginLogout")
   static ProbingSequence provideEppLoginLogoutProbingSequence(
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
-      @Named("Hello") ProbingStep.Builder helloStepBuilder,
-      @Named("Login") ProbingStep.Builder loginStepBuilder,
-      @Named("Logout") ProbingStep.Builder logoutStepBuilder) {
+      @Named("hello") ProbingStep.Builder helloStepBuilder,
+      @Named("login") ProbingStep.Builder loginStepBuilder,
+      @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
@@ -77,16 +71,17 @@ public class EppModule {
         .build();
   }
 
+  /** Dagger provided {@link ProbingSequence} that probes EPP login, create, delete, and logout actions. */
   @Provides
   @Named("eppLoginCreateDeleteLogout")
   static ProbingSequence provideEppLoginCreateDeleteLogoutProbingSequence(
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
-      @Named("Hello") ProbingStep.Builder helloStepBuilder,
-      @Named("Login") ProbingStep.Builder loginStepBuilder,
-      @Named("Create") ProbingStep.Builder createStepBuilder,
-      @Named("Delete") ProbingStep.Builder deleteStepBuilder,
-      @Named("Logout") ProbingStep.Builder logoutStepBuilder) {
+      @Named("hello") ProbingStep.Builder helloStepBuilder,
+      @Named("login") ProbingStep.Builder loginStepBuilder,
+      @Named("create") ProbingStep.Builder createStepBuilder,
+      @Named("delete") ProbingStep.Builder deleteStepBuilder,
+      @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
@@ -98,18 +93,19 @@ public class EppModule {
         .build();
   }
 
+  /** Dagger provided {@link ProbingSequence} that probes EPP login, create, check, delete, and logout actions. */
   @Provides
   @Named("eppLoginCreateCheckDeleteCheckLogout")
   static ProbingSequence provideEppLoginCreateCheckDeleteCheckLogoutProbingSequence(
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
-      @Named("Hello") ProbingStep.Builder helloStepBuilder,
-      @Named("Login") ProbingStep.Builder loginStepBuilder,
-      @Named("Create") ProbingStep.Builder createStepBuilder,
-      @Named("Check") ProbingStep.Builder checkStepFirstBuilder,
-      @Named("Delete") ProbingStep.Builder deleteStepBuilder,
-      @Named("Check") ProbingStep.Builder checkStepSecondBuilder,
-      @Named("Logout") ProbingStep.Builder logoutStepBuilder) {
+      @Named("hello") ProbingStep.Builder helloStepBuilder,
+      @Named("login") ProbingStep.Builder loginStepBuilder,
+      @Named("create") ProbingStep.Builder createStepBuilder,
+      @Named("checkExists") ProbingStep.Builder checkStepFirstBuilder,
+      @Named("delete") ProbingStep.Builder deleteStepBuilder,
+      @Named("checkNotExists") ProbingStep.Builder checkStepSecondBuilder,
+      @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
@@ -124,80 +120,104 @@ public class EppModule {
   }
 
 
+  /**
+   * Provides {@link ProbingStep.Builder} that, when built, establishes initial connection
+   * to EPP server.
+   *
+   * <p>Always necessary as first step for any EPP {@link ProbingSequence} and first repeated
+   * step for any {@link ProbingSequence} that doesn't stay logged in (transient).</p>
+   */
   @Provides
-  @Named("Hello")
+  @Named("hello")
   static ProbingStep.Builder provideEppHelloStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      Hello helloRequest) {
+      EppRequestMessage.Hello helloRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(helloRequest);
   }
 
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, logs into the EPP server. */
   @Provides
-  @Named("Login")
+  @Named("login")
   static ProbingStep.Builder provideEppLoginStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      Login loginRequest) {
+      EppRequestMessage.Login loginRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(loginRequest);
   }
 
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, creates new domain on EPP server. */
   @Provides
-  @Named("Create")
+  @Named("create")
   static ProbingStep.Builder provideEppCreateStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      Create createRequest) {
+      EppRequestMessage.Create createRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(createRequest);
   }
 
-    @Provides
-    @Named("Check")
-    static ProbingStep.Builder provideEppCheckStepBuilder(
-        @EppProtocol Protocol eppProtocol,
-        Duration duration,
-        CheckSuccess checkRequest) {
-      return ProbingStep.builder()
-          .setProtocol(eppProtocol)
-          .setDuration(duration)
-          .setMessageTemplate(checkRequest);
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, checks a domain doesn't exist on EPP server. */
+  @Provides
+  @Named("checkNotExists")
+  static ProbingStep.Builder provideEppCheckNotExistsStepBuilder(
+      @EppProtocol Protocol eppProtocol,
+      Duration duration,
+      EppRequestMessage.CheckNotExists checkNotExistsRequest) {
+    return ProbingStep.builder()
+        .setProtocol(eppProtocol)
+        .setDuration(duration)
+        .setMessageTemplate(checkNotExistsRequest);
   }
 
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, checks a domain exists on EPP server. */
   @Provides
-  @Named("Delete")
+  @Named("checkExists")
+  static ProbingStep.Builder provideEppCheckExistsStepBuilder(
+      @EppProtocol Protocol eppProtocol,
+      Duration duration,
+      EppRequestMessage.CheckExists checkExistsRequest) {
+    return ProbingStep.builder()
+        .setProtocol(eppProtocol)
+        .setDuration(duration)
+        .setMessageTemplate(checkExistsRequest);
+  }
+
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, checks deletes a domain from EPP server. */
+  @Provides
+  @Named("delete")
   static ProbingStep.Builder provideEppDeleteStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      Delete deleteRequest) {
+      EppRequestMessage.Delete deleteRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(deleteRequest);
   }
 
+  /** {@link Provides} {@link ProbingStep.Builder} that, when built, logs out of EPP server. */
   @Provides
-  @Named("Logout")
+  @Named("logout")
   static ProbingStep.Builder provideEppLogoutStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      Logout logoutRequest) {
+      EppRequestMessage.Logout logoutRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(logoutRequest);
   }
 
-
-
+  /** {@link Provides} {@link Protocol} that represents an EPP connection. */
   @Singleton
   @Provides
   @EppProtocol
@@ -212,6 +232,7 @@ public class EppModule {
         .build();
   }
 
+  /** {@link Provides} the list of providers of {@link ChannelHandler}s that are used for the EPP Protocol. */
   @Provides
   @EppProtocol
   static ImmutableList<Provider<? extends ChannelHandler>> provideEppHandlerProviders(
@@ -224,8 +245,7 @@ public class EppModule {
         eppActionHandlerProvider);
   }
 
-
-
+  /** {@link Provides} the {@link SslClientInitializer} used for the {@link EppProtocol}. */
   @Provides
   @EppProtocol
   static SslClientInitializer<NioSocketChannel> provideSslClientInitializer(

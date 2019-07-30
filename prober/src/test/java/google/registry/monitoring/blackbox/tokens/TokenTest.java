@@ -17,20 +17,15 @@ package google.registry.monitoring.blackbox.tokens;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import google.registry.monitoring.blackbox.messages.EppMessage;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
-import google.registry.monitoring.blackbox.tokens.Token;
-import google.registry.monitoring.blackbox.tokens.WebWhoisToken;
+import google.registry.monitoring.blackbox.messages.EppRequestMessage.Create;
 import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.messages.EppResponseMessage;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
 import java.io.IOException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.w3c.dom.Document;
 
 /**
  * Unit Tests for each {@link Token} subtype (just {@link WebWhoisToken} for now)
@@ -43,6 +38,7 @@ public class TokenTest {
   private static ImmutableList<String> TEST_DOMAINS = ImmutableList.of("test");
   private static String TEST_HOST = "host";
 
+  /** Only two tokens that exist are tested. */
   public Token webToken = new WebWhoisToken(PREFIX, TEST_DOMAINS);
   private Token eppToken = new EppToken.Persistent(TEST_DOMAINS.get(0), TEST_HOST);
 
@@ -63,14 +59,15 @@ public class TokenTest {
 
   @Test
   public void testEppToken_MessageModificationSuccess() throws InternalException, IOException {
-    EppRequestMessage originalMessage = new EppRequestMessage.CREATE();
+    EppRequestMessage originalMessage = new EppRequestMessage.Create(new EppResponseMessage.SimpleSuccess());
     String domainName = ((EppToken)eppToken).getCurrentDomainName();
     String clTRID = domainName.substring(0, domainName.indexOf('.'));
 
     EppRequestMessage modifiedMessage = (EppRequestMessage) eppToken.modifyMessage(originalMessage);
 
+    //ensure element values are what they should be
     assertThat(modifiedMessage.getElementValue("//domainns:name")).isEqualTo(domainName);
-    assertThat(modifiedMessage.getClTRID()).isNotEqualTo(clTRID);
+    assertThat(modifiedMessage.getElementValue("//eppns:clTRID")).isNotEqualTo(clTRID);
 
   }
 

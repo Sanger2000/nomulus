@@ -27,10 +27,14 @@ public class Prober {
 
   public static void main(String[] args) {
 
-    //Obtains WebWhois Sequence provided by proberComponent
+    //Obtains the WebWHOIS sequence provided by proberComponent
+    ProbingSequence webWhoisSequence = proberComponent.provideWebWhoisSequence();
+
+    //Obtains Advanced Epp Sequence provided by proberComponent
     ProbingSequence eppSequence = proberComponent.provideAdvancedEppSequence();
 
-    //Tells Sequence to start running
+    //Tells sequences to start running
+    webWhoisSequence.start();
     eppSequence.start();
   }
 }

@@ -100,10 +100,6 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     return this;
   }
 
-  public String getClTRID() {
-    return clTRID;
-  }
-
   /** Private constructor for {@link EppRequestMessage} that its subclasses use for instantiation. */
   private EppRequestMessage(EppResponseMessage expectedResponse, String template) {
     this.expectedResponse = expectedResponse;
@@ -188,6 +184,8 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
    */
   public static class Login extends EppRequestMessage {
     private static final String template = "login.xml";
+
+    /** We store the clientId and password, which are necessary for the login EPP message. */
     private String eppClientId;
     private String eppClientPassword;
 
@@ -270,31 +268,6 @@ public abstract class EppRequestMessage extends EppMessage implements OutboundMe
     @Override
     public String name() {
       return "Check Not Exists Action";
-    }
-  }
-
-  /**
-   * {@link EppRequestMessage} subclass that represents message sent
-   * to check that a given domain doesn't exist on the server's EPP records.
-   *
-   * <p>Expects back a {@link EppResponseMessage.DomainNotExists} from server.</p>
-   *
-   * <p>Constructor takes in only Dagger provided
-   * {@link EppResponseMessage.DomainNotExists}.</p>
-   *
-   * <p>Message is modified using parent {@code modifyMessage}.</p>
-   */
-  public static class ClaimsCheck extends EppRequestMessage {
-    private static final String template = "claimscheck.xml";
-
-    @Inject
-    public ClaimsCheck(EppResponseMessage.DomainClaimsCheck domainClaimsCheckResponse) {
-      super(domainClaimsCheckResponse, template);
-    }
-
-    @Override
-    public String name() {
-      return "Claimscheck Action";
     }
   }
 
