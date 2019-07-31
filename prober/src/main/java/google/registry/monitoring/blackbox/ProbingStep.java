@@ -18,14 +18,19 @@ import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.exceptions.FailureException;
 import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
+import google.registry.monitoring.blackbox.handlers.ActionHandler.ResponseType;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.Token;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import java.net.SocketAddress;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import org.joda.time.Duration;
 
 /**
@@ -41,17 +46,34 @@ import org.joda.time.Duration;
 @AutoValue
 public abstract class ProbingStep implements Consumer<Token> {
 
-
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Necessary boolean to inform when to obtain next {@link Token}*/
   protected boolean isLastStep = false;
   private ProbingStep nextStep;
 
+  /** Time delay duration between actions. */
   abstract Duration duration();
+
+  /** {@link Protocol} type for this step. */
   abstract Protocol protocol();
+
+  /** {@link OutboundMessageType} instance that serves as template to be modified by {@link Token}. */
   abstract OutboundMessageType messageTemplate();
+
+  /** {@link Bootstrap} instance provided by parent {@link ProbingSequence} that allows for creation of new channels. */
   abstract Bootstrap bootstrap();
+
+  /** {@link MetricsCollector} instance provided by parent {@link ProbingSequence} that allows for writing collected metrics. */
+  abstract MetricsCollector metrics();
+
+  /** {@link Clock} instance provided by parent {@link ProbingSequence} that records times for latency. */
+  abstract Clock clock();
+
+  /**
+   * Specifies {@link SocketAddress} for {@link Bootstrap} to bind to when forming new channel. Mainly used when
+   * specifying {@link io.netty.channel.local.LocalAddress} for testing.
+   */
   @Nullable abstract SocketAddress address();
 
 
@@ -64,6 +86,10 @@ public abstract class ProbingStep implements Consumer<Token> {
     public abstract Builder setMessageTemplate(OutboundMessageType value);
 
     public abstract Builder setBootstrap(Bootstrap value);
+
+    public abstract Builder setMetrics(MetricsCollector metrics);
+
+    public abstract Builder setClock(Clock clock);
 
     public abstract Builder setAddress(SocketAddress address);
 
@@ -109,44 +135,77 @@ public abstract class ProbingStep implements Consumer<Token> {
     return (isLastStep) ? token.next() : token;
   }
 
+  /** Records latency and status to {@link MetricsCollector}. */
+  private void recordMetrics(long start, ResponseType status) {
+    long latency = clock().nowUtc().getMillis() - start;
+    metrics().recordResult(protocol().name(), messageTemplate().name(), status, latency);
+  }
+
+  /**
+   * Generates new {@link ProbingAction}, calls the action, then records the result of the action.
+   *
+   * @param token - used to generate the {@link ProbingAction} by calling {@code generateAction}.
+   *
+   * <p>If unable to generate the action, or the calling the action results in an immediate error,
+   * we record the result as an ERROR. Otherwise, if the future marked as finished when the action is
+   * completed is marked as a success, we record the result as SUCCESS. Otherwise, if the cause of failure
+   * is a {@link FailureException}, we record it as a FAILURE. If neither of those are the case, we record
+   * the result as an ERROR. </p>
+   */
   @Override
   public void accept(Token token) {
     ProbingAction currentAction;
+    long start = clock().nowUtc().getMillis();
     //attempt to generate new action. On error, move on to next step
     try {
       currentAction = generateAction(token);
     } catch(UndeterminedStateException e) {
       logger.atWarning().withCause(e).log("Error in Action Generation");
+
+      recordMetrics(start, ResponseType.ERROR);
+
       nextStep.accept(generateNextToken(token));
       return;
     }
 
 
-
-    //call the created action
     ChannelFuture future;
-
     try {
+      //call the generated action
       future = currentAction.call();
-
     } catch(UndeterminedStateException e) {
+      //On error in calling action, log error and record metrics as ERROR
       logger.atWarning().withCause(e).log("Error in Action Performed");
+      recordMetrics(start, ResponseType.ERROR);
+
+      //Move on to next step in ProbingSequence
       nextStep.accept(generateNextToken(token));
       return;
     }
 
 
-    //On result, either log success and move on, or
     future.addListener(f -> {
       if (f.isSuccess()) {
+        //On a successful result, we log as a successful step, and record as a SUCCESS
         logger.atInfo().log(String.format("Successfully completed Probing Step: %s", this));
-        //If the next step maintains the connection, pass on the channel from this
+        recordMetrics(start, ResponseType.SUCCESS);
       } else {
+        //On a failed result, we log the failure
         logger.atSevere().withCause(f.cause()).log("Did not result in future success");
+
+        if (f.cause() instanceof FailureException)
+          //On an instance of a FailureException, record metrics as FAILURE
+          recordMetrics(start, ResponseType.FAILURE);
+        else
+          //Otherwise, record metrics as ERROR
+          recordMetrics(start, ResponseType.ERROR);
       }
+
       if (protocol().persistentConnection())
+        //If the connection is persistent, we store the channel in the token
         token.setChannel(currentAction.channel());
 
+      //Move on the the next step in the ProbingSequence
       nextStep.accept(generateNextToken(token));
 
 

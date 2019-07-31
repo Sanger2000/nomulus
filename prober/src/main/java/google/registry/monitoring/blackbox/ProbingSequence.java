@@ -14,7 +14,9 @@
 
 package google.registry.monitoring.blackbox;
 
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.EventLoopGroup;
@@ -49,8 +51,31 @@ public class ProbingSequence {
     private ProbingStep currentStep;
     private ProbingStep firstStep;
     private ProbingStep firstRepeatedStep;
+
+    private MetricsCollector metrics;
+    private Clock clock;
     private Bootstrap bootstrap;
     private Token startToken;
+
+    /**
+     * Adds {@link MetricsCollector} that is supplied to each {@link ProbingStep}.
+     *
+     * <p>Must be called before adding {@link ProbingStep.Builder}s.</p>
+     */
+    public Builder setMetrics(MetricsCollector metrics) {
+      this.metrics = metrics;
+      return this;
+    }
+
+    /**
+     * Adds {@link Clock} that is supplied to each {@link ProbingStep}.
+     *
+     * <p>Must be called before adding {@link ProbingStep.Builder}s.</p>
+     */
+    public Builder setClock(Clock clock) {
+      this.clock = clock;
+      return this;
+    }
 
     /**
      * Adds {@link Bootstrap} that is supplied to each {@link ProbingStep}.
@@ -74,7 +99,11 @@ public class ProbingSequence {
      */
     public Builder addStep(ProbingStep.Builder stepBuilder) {
       assert (bootstrap != null);
-      ProbingStep step = stepBuilder.setBootstrap(bootstrap).build();
+      ProbingStep step = stepBuilder
+          .setMetrics(metrics)
+          .setClock(clock)
+          .setBootstrap(bootstrap)
+          .build();
 
       if (currentStep == null)
         firstStep = step;

@@ -6,7 +6,9 @@ import static google.registry.testing.JUnitBackports.assertThrows;
 import google.registry.monitoring.blackbox.TestUtils.ProbingSequenceTestToken;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import java.net.SocketAddress;
 import org.joda.time.Duration;
@@ -58,6 +60,16 @@ public class ProbingSequenceTest {
       return bootstrap;
     }
 
+    @Override
+    MetricsCollector metrics() {
+      return null;
+    }
+
+    @Override
+    Clock clock() {
+      return null;
+    }
+
     /**
      * Builder for {@link TestStep}, that extends {@link ProbingStep.Builder} so that these can be
      * input into the {@link ProbingSequence.Builder}.
@@ -93,6 +105,16 @@ public class ProbingSequenceTest {
       public ProbingStep.Builder setBootstrap(Bootstrap value) {
         bootstrap = value;
         return this;
+      }
+
+      @Override
+      public ProbingStep.Builder setMetrics(MetricsCollector metrics) {
+        return null;
+      }
+
+      @Override
+      public ProbingStep.Builder setClock(Clock clock) {
+        return null;
       }
 
       public ProbingStep.Builder addMarker(String value) {

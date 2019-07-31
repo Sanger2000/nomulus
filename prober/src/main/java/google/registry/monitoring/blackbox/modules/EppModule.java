@@ -29,7 +29,9 @@ import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage.Check;
 import google.registry.monitoring.blackbox.messages.EppResponseMessage;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.EppToken;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -59,12 +61,16 @@ public class EppModule {
   @Provides
   @Named("eppLoginLogout")
   static ProbingSequence provideEppLoginLogoutProbingSequence(
-      EppToken.Transient token,
+      MetricsCollector metrics,
+      Clock clock,
       Provider<Bootstrap> bootstrapProvider,
+      EppToken.Transient token,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
       @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
+        .setMetrics(metrics)
+        .setClock(clock)
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
         .addStep(helloStepBuilder)
@@ -77,14 +83,18 @@ public class EppModule {
   @Provides
   @Named("eppLoginCreateDeleteLogout")
   static ProbingSequence provideEppLoginCreateDeleteLogoutProbingSequence(
-      EppToken.Transient token,
+      MetricsCollector metrics,
+      Clock clock,
       Provider<Bootstrap> bootstrapProvider,
+      EppToken.Transient token,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
       @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
       @Named("createSuccess") ProbingStep.Builder createStepBuilder,
       @Named("deleteSuccess") ProbingStep.Builder deleteStepBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
+        .setMetrics(metrics)
+        .setClock(clock)
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
         .addStep(helloStepBuilder)
@@ -99,8 +109,10 @@ public class EppModule {
   @Provides
   @Named("eppLoginCreateCheckDeleteCheckLogout")
   static ProbingSequence provideEppLoginCreateCheckDeleteCheckLogoutProbingSequence(
-      EppToken.Transient token,
+      MetricsCollector metrics,
+      Clock clock,
       Provider<Bootstrap> bootstrapProvider,
+      EppToken.Transient token,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
       @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
       @Named("createSuccess") ProbingStep.Builder createStepBuilder,
@@ -109,6 +121,8 @@ public class EppModule {
       @Named("checkNotExists") ProbingStep.Builder checkStepSecondBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
+        .setMetrics(metrics)
+        .setClock(clock)
         .setBootstrap(bootstrapProvider.get())
         .addToken(token)
         .addStep(helloStepBuilder)

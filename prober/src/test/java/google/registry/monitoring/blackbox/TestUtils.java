@@ -21,7 +21,9 @@ import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.Token;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -178,6 +180,16 @@ public class TestUtils {
 
     @Override
     Bootstrap bootstrap() {
+      return null;
+    }
+
+    @Override
+    MetricsCollector metrics() {
+      return null;
+    }
+
+    @Override
+    Clock clock() {
       return null;
     }
 

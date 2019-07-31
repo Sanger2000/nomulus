@@ -1,6 +1,7 @@
 package google.registry.monitoring.blackbox.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.testing.JUnitBackports.assertThrows;
 
 import google.registry.monitoring.blackbox.exceptions.EppClientException;
 import google.registry.monitoring.blackbox.exceptions.FailureException;
@@ -45,7 +46,6 @@ public class EppActionHandlerTest {
   private static final int FAILURE_RESULT_CODE = 2500;
 
   private EmbeddedChannel channel;
-  private StatusHandler statusHandler;
   private EppActionHandler actionHandler;
   private EppMessageHandler messageHandler;
 
@@ -71,7 +71,6 @@ public class EppActionHandlerTest {
   /** Setup main three handlers to be used in pipeline. */
   @Before
   public void setup() throws EppClientException {
-    statusHandler = new StatusHandler();
     actionHandler = new EppActionHandler();
     messageHandler = new EppMessageHandler();
 
@@ -122,7 +121,7 @@ public class EppActionHandlerTest {
   public void testBasicAction_Success_Embedded()
       throws SAXException, IOException, EppClientException, FailureException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(actionHandler, statusHandler);
+    setupEmbeddedChannel(actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
     
@@ -133,14 +132,15 @@ public class EppActionHandlerTest {
     channel.writeInbound(response);
 
     future.syncUninterruptibly();
-    assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.SUCCESS);
+
+    assertThat(future.isSuccess()).isTrue();
   }
 
   @Test
   public void testBasicAction_FailCode_Embedded()
       throws SAXException, IOException, EppClientException, FailureException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(actionHandler, statusHandler);
+    setupEmbeddedChannel(actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
 
@@ -150,37 +150,39 @@ public class EppActionHandlerTest {
 
     channel.writeInbound(response);
 
-    future.syncUninterruptibly();
-    assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.FAILURE);
+    assertThrows(FailureException.class, future::syncUninterruptibly);
   }
 
   @Test
   public void testBasicAction_FailTRID_Embedded()
       throws SAXException, IOException, EppClientException, FailureException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(actionHandler, statusHandler);
+    setupEmbeddedChannel(actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
 
     EppResponseMessage response = messageType.getExpectedResponse();
 
-    response.getDocument(EppServer.stringToByteBuf(getResponseString(messageType.getExpectedResponse(), false, FAILURE_TRID)));
+    response.getDocument(EppServer.stringToByteBuf(
+        getResponseString(messageType.getExpectedResponse(), false, FAILURE_TRID)));
 
     channel.writeInbound(response);
 
-    future.syncUninterruptibly();
 
-    if (messageType instanceof EppRequestMessage.Hello)
-      assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.SUCCESS);
-    else
-      assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.FAILURE);
+
+    if (messageType instanceof EppRequestMessage.Hello) {
+      future.syncUninterruptibly();
+      assertThat(future.isSuccess()).isTrue();
+    } else {
+      assertThrows(FailureException.class, future::syncUninterruptibly);
+    }
   }
 
   @Test
   public void testIntegratedAction_Success_Embedded()
       throws IOException, SAXException, UndeterminedStateException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(messageHandler, actionHandler, statusHandler);
+    setupEmbeddedChannel(messageHandler, actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(messageType);
@@ -188,41 +190,43 @@ public class EppActionHandlerTest {
     channel.writeInbound(EppServer.stringToByteBuf(getResponseString(messageType.getExpectedResponse(), false, USER_CLIENT_TRID)));
 
     future.syncUninterruptibly();
-    assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.SUCCESS);
+
+    assertThat(future.isSuccess()).isTrue();
   }
 
   @Test
   public void testIntegratedAction_FailCode_Embedded()
       throws IOException, SAXException, UndeterminedStateException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(messageHandler, actionHandler, statusHandler);
+    setupEmbeddedChannel(messageHandler, actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(messageType);
 
     channel.writeInbound(EppServer.stringToByteBuf(getResponseString(messageType.getExpectedResponse(), true, USER_CLIENT_TRID)));
 
-    future.syncUninterruptibly();
-    assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.FAILURE);
+    assertThrows(FailureException.class, future::syncUninterruptibly);
   }
 
   @Test
   public void testIntegratedAction_FailTRID_Embedded()
       throws IOException, SAXException, UndeterminedStateException {
     //We simply use an embedded channel in this instance
-    setupEmbeddedChannel(messageHandler, actionHandler, statusHandler);
+    setupEmbeddedChannel(messageHandler, actionHandler);
 
     ChannelFuture future = actionHandler.getFuture();
     channel.writeOutbound(messageType);
 
-    channel.writeInbound(EppServer.stringToByteBuf(getResponseString(messageType.getExpectedResponse(), false, FAILURE_TRID)));
+    channel.writeInbound(EppServer.stringToByteBuf(
+        getResponseString(messageType.getExpectedResponse(), false, FAILURE_TRID)));
 
-    future.syncUninterruptibly();
 
-    if (messageType instanceof EppRequestMessage.Hello)
-      assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.SUCCESS);
-    else
-      assertThat(statusHandler.getResponse()).isEqualTo(ResponseType.FAILURE);
+    if (messageType instanceof EppRequestMessage.Hello) {
+      future.syncUninterruptibly();
+      assertThat(future.isSuccess()).isTrue();
+    } else {
+      assertThrows(FailureException.class, future::syncUninterruptibly);
+    }
   }
 
 }

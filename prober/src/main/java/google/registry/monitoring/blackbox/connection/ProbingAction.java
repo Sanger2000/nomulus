@@ -228,7 +228,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
     public abstract Builder setBootstrap(Optional<Bootstrap> value);
 
-    public abstract Builder setConnectionFuture(ChannelFuture future);
+    abstract Builder setConnectionFuture(ChannelFuture future);
 
     abstract Protocol protocol();
 
@@ -302,7 +302,9 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
     }
   }
 
-
+  public String name() {
+    return outboundMessage().name();
+  }
 
   @Override
   public String toString() {

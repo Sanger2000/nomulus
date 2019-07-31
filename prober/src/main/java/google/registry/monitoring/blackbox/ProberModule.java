@@ -18,10 +18,13 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.modules.CertificateModule;
 import google.registry.monitoring.blackbox.modules.EppModule;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
+import google.registry.util.Clock;
+import google.registry.util.SystemClock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -62,6 +65,12 @@ public class ProberModule {
     return new Bootstrap()
         .group(eventLoopGroup)
         .channel(NioSocketChannel.class);
+  }
+
+  @Provides
+  @Singleton
+  static Clock provideClock() {
+    return new SystemClock();
   }
 
   /** {@link Provides} the {@link SslProvider} used by instances of {@link google.registry.monitoring.blackbox.handlers.SslClientInitializer} */

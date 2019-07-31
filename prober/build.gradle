@@ -1,3 +1,7 @@
+plugins {
+    id 'java'
+}
+
 // Copyright 2019 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,12 +23,17 @@ createUberJar('deployJar', 'prober', 'google.registry.monitoring.blackbox.Prober
 dependencies {
     def deps = rootProject.dependencyMap
 
+    compile deps['com.beust:jcommander']
+    compile deps['com.google.apis:google-api-services-cloudkms']
+    compile deps['com.google.apis:google-api-services-storage']
     compile deps['com.google.auto.value:auto-value-annotations']
-    compile deps['com.google.code.findbugs:jsr305']
-    compile deps['com.google.code.gson:gson']
     compile deps['com.google.dagger:dagger']
     compile deps['com.google.flogger:flogger']
     compile deps['com.google.guava:guava']
+    //start backend monitoring dependencies
+    compile deps['com.google.monitoring-client:metrics']
+    compile deps['com.google.monitoring-client:stackdriver']
+    //end backend monitoring dependencies
     compile deps['io.netty:netty-buffer']
     compile deps['io.netty:netty-codec-http']
     compile deps['io.netty:netty-codec']
@@ -33,9 +42,12 @@ dependencies {
     compile deps['io.netty:netty-transport']
     compile deps['javax.inject:javax.inject']
     compile deps['joda-time:joda-time']
+    //Start ssl dependencies
     compile deps['org.bouncycastle:bcpkix-jdk15on']
     compile deps['org.bouncycastle:bcprov-jdk15on']
+    //end ssl dependencies
     compile project(':util')
+
 
     runtime deps['com.google.flogger:flogger-system-backend']
     runtime deps['com.google.auto.value:auto-value']

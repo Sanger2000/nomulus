@@ -25,7 +25,9 @@ import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.handlers.WebWhoisMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.handlers.WebWhoisActionHandler;
+import google.registry.monitoring.blackbox.metrics.MetricsCollector;
 import google.registry.monitoring.blackbox.tokens.WebWhoisToken;
+import google.registry.util.Clock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
@@ -70,13 +72,17 @@ public class WebWhoisModule {
   @Provides
   @WebWhoisProtocol
   ProbingSequence provideWebWhoisSequence(
-      @WebWhoisProtocol ProbingStep.Builder probingStepBuilder,
+      MetricsCollector metrics,
+      Clock clock,
+      @WebWhoisProtocol Bootstrap bootstrap,
       WebWhoisToken webWhoisToken,
-      @WebWhoisProtocol Bootstrap bootstrap) {
+      @WebWhoisProtocol ProbingStep.Builder probingStepBuilder) {
 
     return new ProbingSequence.Builder()
-        .addToken(webWhoisToken)
+        .setMetrics(metrics)
+        .setClock(clock)
         .setBootstrap(bootstrap)
+        .addToken(webWhoisToken)
         .addStep(probingStepBuilder)
         .build();
   }

@@ -21,6 +21,7 @@ import static google.registry.monitoring.blackbox.TestUtils.makeHttpGetRequest;
 import static google.registry.monitoring.blackbox.TestUtils.makeRedirectResponse;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.exceptions.FailureException;
 import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.servers.WebWhoisServer;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
@@ -156,9 +157,8 @@ public class WebWhoisActionHandlerTest {
   @Test
   public void testBasic_responseOk() throws Exception {
     //setup
-    Bootstrap bootstrap = null;
     HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest("", ""));
-    setupActionHandler(bootstrap, msg);
+    setupActionHandler(null, msg);
     Protocol initialProtocol = createProtocol("responseOk", 0, true);
     generateLocalAddress();
 
@@ -190,9 +190,8 @@ public class WebWhoisActionHandlerTest {
   @Test
   public void testBasic_responseFailure() {
     //setup
-    Bootstrap bootstrap = null;
     HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest("", ""));
-    setupActionHandler(bootstrap, msg);
+    setupActionHandler(null, msg);
     Protocol initialProtocol = createProtocol("responseBad", 0, true);
     generateLocalAddress();
     setupChannel(initialProtocol, msg);
@@ -222,9 +221,8 @@ public class WebWhoisActionHandlerTest {
     @Test
     public void testBasic_responseError() {
       //setup
-      Bootstrap bootstrap = null;
       HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest("", ""));
-      setupActionHandler(bootstrap, msg);
+      setupActionHandler(null, msg);
       Protocol initialProtocol = createProtocol("responseError", 0, true);
       generateLocalAddress();
       setupChannel(initialProtocol, msg);
@@ -244,9 +242,11 @@ public class WebWhoisActionHandlerTest {
 
       channel.writeInbound(response);
 
-      //assesses that listener is triggered, and event is success
+      //assesses that listener is triggered, and event is failure
       assertThat(testPromise.isSuccess()).isTrue();
-      assertThat(future.isSuccess()).isTrue();
+      assertThat(future.isSuccess()).isFalse();
+      assertThat(future.cause() instanceof FailureException);
+
       //ensures Protocol is the same
       assertThat(channel.attr(PROTOCOL_KEY).get()).isEqualTo(initialProtocol);
   }
@@ -315,10 +315,9 @@ public class WebWhoisActionHandlerTest {
   @Test
   public void testAdvanced_responseOk() throws UndeterminedStateException {
     //setup
-    Bootstrap bootstrap = null;
     EventLoopGroup group = new NioEventLoopGroup(1);
     HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest(TARGET_HOST, ""));
-    setupActionHandler(bootstrap, msg);
+    setupActionHandler(null, msg);
     Protocol initialProtocol = createProtocol("responseOk", 0, false);
     generateLocalAddress();
     setupLocalServer("", TARGET_HOST);
@@ -334,10 +333,9 @@ public class WebWhoisActionHandlerTest {
   @Test
   public void testAdvanced_responseFailure() throws UndeterminedStateException {
     //setup
-    Bootstrap bootstrap = null;
     EventLoopGroup group = new NioEventLoopGroup(1);
     HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest(DUMMY_URL, ""));
-    setupActionHandler(bootstrap, msg);
+    setupActionHandler(null, msg);
     Protocol initialProtocol = createProtocol("responseFail", 0, false);
     generateLocalAddress();
     setupLocalServer("", TARGET_HOST);
