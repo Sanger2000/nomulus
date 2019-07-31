@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.monitoring.blackbox;
+package google.registry.monitoring.blackbox.connection;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -22,9 +22,7 @@ import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.servers.EchoServer;
 import google.registry.monitoring.blackbox.TestUtils.DuplexMessageTest;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
-import google.registry.monitoring.blackbox.connection.ProbingAction;
-import google.registry.monitoring.blackbox.connection.Protocol;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
 import google.registry.monitoring.blackbox.handlers.ConversionHandler;
 import google.registry.monitoring.blackbox.handlers.TestActionHandler;
@@ -130,7 +128,7 @@ public class ProbingActionTest {
   }
 
   @Test
-  public void testBehavior_existingChannel() throws InternalException {
+  public void testBehavior_existingChannel() throws UndeterminedStateException {
     //setup
     setupChannel();
     setupExistingChannelProtocol();

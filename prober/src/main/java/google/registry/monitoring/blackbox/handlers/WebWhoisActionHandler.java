@@ -19,11 +19,11 @@ import static google.registry.monitoring.blackbox.connection.Protocol.PROTOCOL_K
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.exceptions.FailureException;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpWhoisProtocol;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.HttpsWhoisProtocol;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
-import google.registry.monitoring.blackbox.exceptions.ResponseException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.exceptions.ConnectionException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
@@ -92,7 +92,7 @@ public class WebWhoisActionHandler extends ActionHandler {
    */
   @Override
   public void channelRead0(ChannelHandlerContext ctx, InboundMessageType msg)
-      throws ResponseException, InternalException {
+      throws FailureException, UndeterminedStateException {
 
     HttpResponseMessage response = (HttpResponseMessage) msg;
 
@@ -111,7 +111,7 @@ public class WebWhoisActionHandler extends ActionHandler {
         url = new URL(response.headers().get("Location"));
       } catch (MalformedURLException e) {
         //in case of error, log it, and let ActionHandler's exceptionThrown method deal with it
-        throw new ResponseException("Redirected Location was invalid. Given Location was: " + response.headers().get("Location"));
+        throw new FailureException("Redirected Location was invalid. Given Location was: " + response.headers().get("Location"));
       }
       //From url, extract new host, port, and path
       String newHost = url.getHost();
@@ -127,7 +127,7 @@ public class WebWhoisActionHandler extends ActionHandler {
       } else if (newPort == httpsPort) {
         newProtocol = httpsWhoisProtocol;
       } else {
-        throw new ResponseException("Redirection Location port was invalid. Given port was: " + newPort);
+        throw new FailureException("Redirection Location port was invalid. Given port was: " + newPort);
       }
 
       //Obtain HttpRequestMessage with modified headers to reflect new host and path.
@@ -169,7 +169,7 @@ public class WebWhoisActionHandler extends ActionHandler {
     } else {
       //Add in metrics Handling that informs MetricsCollector the response was a FAILURE
       logger.atWarning().log(String.format("Received unexpected response: %s", response.status()));
-      throw new ResponseException("Response received from remote site was: " + response.status());
+      throw new FailureException("Response received from remote site was: " + response.status());
 
     }
   }

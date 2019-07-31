@@ -14,7 +14,7 @@
 
 package google.registry.monitoring.blackbox.tokens;
 
-import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.channel.Channel;
 
@@ -41,7 +41,7 @@ public abstract class Token {
   public abstract String getHost();
 
   /** Modifies the {@link OutboundMessageType} in the manner necessary for each loop */
-  public abstract OutboundMessageType modifyMessage(OutboundMessageType messageType) throws InternalException;
+  public abstract OutboundMessageType modifyMessage(OutboundMessageType messageType) throws UndeterminedStateException;
 
   /** Set method for {@code channel} */
   public void setChannel(Channel channel) {

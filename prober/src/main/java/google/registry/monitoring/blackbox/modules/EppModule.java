@@ -27,6 +27,8 @@ import google.registry.monitoring.blackbox.handlers.EppActionHandler;
 import google.registry.monitoring.blackbox.handlers.EppMessageHandler;
 import google.registry.monitoring.blackbox.handlers.SslClientInitializer;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
+import google.registry.monitoring.blackbox.messages.EppRequestMessage.Check;
+import google.registry.monitoring.blackbox.messages.EppResponseMessage;
 import google.registry.monitoring.blackbox.tokens.EppToken;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
@@ -60,7 +62,7 @@ public class EppModule {
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
-      @Named("login") ProbingStep.Builder loginStepBuilder,
+      @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
         .setBootstrap(bootstrapProvider.get())
@@ -78,9 +80,9 @@ public class EppModule {
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
-      @Named("login") ProbingStep.Builder loginStepBuilder,
-      @Named("create") ProbingStep.Builder createStepBuilder,
-      @Named("delete") ProbingStep.Builder deleteStepBuilder,
+      @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
+      @Named("createSuccess") ProbingStep.Builder createStepBuilder,
+      @Named("deleteSuccess") ProbingStep.Builder deleteStepBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
         .setBootstrap(bootstrapProvider.get())
@@ -100,10 +102,10 @@ public class EppModule {
       EppToken.Transient token,
       Provider<Bootstrap> bootstrapProvider,
       @Named("hello") ProbingStep.Builder helloStepBuilder,
-      @Named("login") ProbingStep.Builder loginStepBuilder,
-      @Named("create") ProbingStep.Builder createStepBuilder,
+      @Named("loginSuccess") ProbingStep.Builder loginStepBuilder,
+      @Named("createSuccess") ProbingStep.Builder createStepBuilder,
       @Named("checkExists") ProbingStep.Builder checkStepFirstBuilder,
-      @Named("delete") ProbingStep.Builder deleteStepBuilder,
+      @Named("deleteSuccess") ProbingStep.Builder deleteStepBuilder,
       @Named("checkNotExists") ProbingStep.Builder checkStepSecondBuilder,
       @Named("logout") ProbingStep.Builder logoutStepBuilder) {
     return new ProbingSequence.Builder()
@@ -132,7 +134,7 @@ public class EppModule {
   static ProbingStep.Builder provideEppHelloStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.Hello helloRequest) {
+      @Named("hello") EppRequestMessage helloRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -141,11 +143,11 @@ public class EppModule {
 
   /** {@link Provides} {@link ProbingStep.Builder} that, when built, logs into the EPP server. */
   @Provides
-  @Named("login")
+  @Named("loginSuccess")
   static ProbingStep.Builder provideEppLoginStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.Login loginRequest) {
+      @Named("loginSuccess") EppRequestMessage loginRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -154,11 +156,11 @@ public class EppModule {
 
   /** {@link Provides} {@link ProbingStep.Builder} that, when built, creates new domain on EPP server. */
   @Provides
-  @Named("create")
+  @Named("createSuccess")
   static ProbingStep.Builder provideEppCreateStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.Create createRequest) {
+      @Named("createSuccess") EppRequestMessage createRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -171,7 +173,7 @@ public class EppModule {
   static ProbingStep.Builder provideEppCheckNotExistsStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.CheckNotExists checkNotExistsRequest) {
+      @Named("checkNotExists") EppRequestMessage checkNotExistsRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -184,7 +186,7 @@ public class EppModule {
   static ProbingStep.Builder provideEppCheckExistsStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.CheckExists checkExistsRequest) {
+      @Named("checkExists") EppRequestMessage checkExistsRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -193,11 +195,11 @@ public class EppModule {
 
   /** {@link Provides} {@link ProbingStep.Builder} that, when built, checks deletes a domain from EPP server. */
   @Provides
-  @Named("delete")
+  @Named("deleteSuccess")
   static ProbingStep.Builder provideEppDeleteStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.Delete deleteRequest) {
+      @Named("deleteSuccess") EppRequestMessage deleteRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
@@ -210,11 +212,99 @@ public class EppModule {
   static ProbingStep.Builder provideEppLogoutStepBuilder(
       @EppProtocol Protocol eppProtocol,
       Duration duration,
-      EppRequestMessage.Logout logoutRequest) {
+      @Named("logout") EppRequestMessage logoutRequest) {
     return ProbingStep.builder()
         .setProtocol(eppProtocol)
         .setDuration(duration)
         .setMessageTemplate(logoutRequest);
+  }
+
+  /**
+   * Set of all possible {@link EppRequestMessage}s paired with their expected {@link EppResponseMessage}s.
+   */
+
+  /** {@link Provides} {@link EppRequestMessage.Hello} with only expected response of {@link EppResponseMessage.Greeting}. */
+  @Provides
+  @Named("hello")
+  static EppRequestMessage provideHelloRequestMessage(
+      EppResponseMessage.Greeting greetingResponse) {
+    return new EppRequestMessage.Hello(greetingResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Login} with expected response of {@link EppResponseMessage.SimpleSuccess}. */
+  @Provides
+  @Named("loginSuccess")
+  static EppRequestMessage provideLoginSuccessRequestMessage(
+      EppResponseMessage.SimpleSuccess simpleSuccessResponse,
+      @Named("eppUserId") String userId,
+      @Named("eppPassword") String userPassword) {
+    return new EppRequestMessage.Login(simpleSuccessResponse, userId, userPassword);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Login} wit expected response of {@link EppResponseMessage.Failure}. */
+  @Provides
+  @Named("loginFailure")
+  static EppRequestMessage provideLoginFailureRequestMessage(
+      EppResponseMessage.Failure failureResponse,
+      @Named("eppUserId") String userId,
+      @Named("eppPassword") String userPassword) {
+    return new EppRequestMessage.Login(failureResponse, userId, userPassword);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Create} with expected response of {@link EppResponseMessage.SimpleSuccess}. */
+  @Provides
+  @Named("createSuccess")
+  static EppRequestMessage provideCreateSuccessRequestMessage(
+      EppResponseMessage.SimpleSuccess simpleSuccessResponse) {
+    return new EppRequestMessage.Create(simpleSuccessResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Create} with expected response of {@link EppResponseMessage.Failure}. */
+  @Provides
+  @Named("createFailure")
+  static EppRequestMessage provideCreateFailureRequestMessage(
+      EppResponseMessage.Failure failureResponse) {
+    return new EppRequestMessage.Create(failureResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Delete} with expected response of {@link EppResponseMessage.SimpleSuccess}. */
+  @Provides
+  @Named("deleteSuccess")
+  static EppRequestMessage provideDeleteSuccessRequestMessage(
+      EppResponseMessage.SimpleSuccess simpleSuccessResponse) {
+    return new EppRequestMessage.Delete(simpleSuccessResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Delete} with expected response of {@link EppResponseMessage.Failure}. */
+  @Provides
+  @Named("deleteFailure")
+  static EppRequestMessage provideDeleteFailureRequestMessage(
+      EppResponseMessage.Failure failureResponse) {
+    return new EppRequestMessage.Delete(failureResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Logout} with only expected response of {@link EppResponseMessage.SimpleSuccess}. */
+  @Provides
+  @Named("logout")
+  static EppRequestMessage provideLogoutRequestMessage(
+      EppResponseMessage.SimpleSuccess simpleSuccessResponse) {
+    return new EppRequestMessage.Logout(simpleSuccessResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Check} with expected response of {@link EppResponseMessage.DomainExists}. */
+  @Provides
+  @Named("checkExists")
+  static EppRequestMessage provideCheckExistsMessage(
+      EppResponseMessage.DomainExists domainExistsResponse) {
+    return new EppRequestMessage.Check(domainExistsResponse);
+  }
+
+  /** {@link Provides} {@link EppRequestMessage.Check} with expected response of {@link EppResponseMessage.DomainNotExists}. */
+  @Provides
+  @Named("checkNotExists")
+  static EppRequestMessage provideCheckNotExistsMessage(
+      EppResponseMessage.DomainNotExists domainNotExistsResponse) {
+    return new EppRequestMessage.Check(domainNotExistsResponse);
   }
 
   /** {@link Provides} {@link Protocol} that represents an EPP connection. */

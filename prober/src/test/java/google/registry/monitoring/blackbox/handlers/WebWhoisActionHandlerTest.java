@@ -21,11 +21,11 @@ import static google.registry.monitoring.blackbox.TestUtils.makeHttpGetRequest;
 import static google.registry.monitoring.blackbox.TestUtils.makeRedirectResponse;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.servers.WebWhoisServer;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.connection.Protocol;
 import google.registry.monitoring.blackbox.TestUtils.TestProvider;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import google.registry.monitoring.blackbox.messages.HttpResponseMessage;
 import io.netty.bootstrap.Bootstrap;
@@ -313,7 +313,7 @@ public class WebWhoisActionHandlerTest {
   }
 
   @Test
-  public void testAdvanced_responseOk() throws InternalException {
+  public void testAdvanced_responseOk() throws UndeterminedStateException {
     //setup
     Bootstrap bootstrap = null;
     EventLoopGroup group = new NioEventLoopGroup(1);
@@ -332,13 +332,13 @@ public class WebWhoisActionHandlerTest {
   }
 
   @Test
-  public void testAdvanced_responseFailure() throws InternalException {
+  public void testAdvanced_responseFailure() throws UndeterminedStateException {
     //setup
     Bootstrap bootstrap = null;
     EventLoopGroup group = new NioEventLoopGroup(1);
     HttpRequestMessage msg = new HttpRequestMessage(makeHttpGetRequest(DUMMY_URL, ""));
     setupActionHandler(bootstrap, msg);
-    Protocol initialProtocol = createProtocol("responseOk", 0, false);
+    Protocol initialProtocol = createProtocol("responseFail", 0, false);
     generateLocalAddress();
     setupLocalServer("", TARGET_HOST);
     setupProbingActionAdvanced(initialProtocol, msg, makeBootstrap(group), DUMMY_URL);

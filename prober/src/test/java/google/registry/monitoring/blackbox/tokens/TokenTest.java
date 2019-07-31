@@ -17,9 +17,8 @@ package google.registry.monitoring.blackbox.tokens;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.messages.EppRequestMessage;
-import google.registry.monitoring.blackbox.messages.EppRequestMessage.Create;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.EppResponseMessage;
 import google.registry.monitoring.blackbox.messages.HttpRequestMessage;
 import java.io.IOException;
@@ -52,13 +51,13 @@ public class TokenTest {
     try {
       HttpRequestMessage secondMessage = (HttpRequestMessage) webToken.modifyMessage(message);
       assertThat(secondMessage.headers().get("host")).isEqualTo(PREFIX+TEST_DOMAINS.get(0));
-    } catch(InternalException e) {
+    } catch(UndeterminedStateException e) {
       throw new RuntimeException(e);
     }
   }
 
   @Test
-  public void testEppToken_MessageModificationSuccess() throws InternalException, IOException {
+  public void testEppToken_MessageModificationSuccess() throws UndeterminedStateException, IOException {
     EppRequestMessage originalMessage = new EppRequestMessage.Create(new EppResponseMessage.SimpleSuccess());
     String domainName = ((EppToken)eppToken).getCurrentDomainName();
     String clTRID = domainName.substring(0, domainName.indexOf('.'));

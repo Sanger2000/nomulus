@@ -15,11 +15,11 @@
 package google.registry.monitoring.blackbox.exceptions;
 
 /**
- * Subclass of {@link InternalException} that represents all instances when
+ * Subclass of {@link UndeterminedStateException} that represents all instances when
  * the action performed failed due to the fault of the Prober when the action
  * is an EPP action.
  */
-public class EppClientException extends InternalException {
+public class EppClientException extends UndeterminedStateException {
 
   public EppClientException(String msg) {
     super(msg);

@@ -14,12 +14,10 @@
 
 package google.registry.monitoring.blackbox.handlers;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
-import google.registry.monitoring.blackbox.exceptions.ConnectionException;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
-import google.registry.monitoring.blackbox.exceptions.ResponseException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
+import google.registry.monitoring.blackbox.exceptions.FailureException;
 import google.registry.monitoring.blackbox.messages.InboundMessageType;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.ChannelFuture;
@@ -73,7 +71,7 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
   /** Marks {@link ResponseType} and {@link ChannelPromise} as success */
   @Override
   public void channelRead0(ChannelHandlerContext ctx, InboundMessageType inboundMessage)
-      throws ResponseException, InternalException {
+      throws FailureException, UndeterminedStateException {
 
     status = ResponseType.SUCCESS;
     ctx.fireChannelRead(status);
@@ -94,8 +92,8 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
         ctx.channel().toString(),
         ctx.channel().pipeline().toString()));
 
-    if (cause instanceof ResponseException) {
-      //On ResponseException, we know the response is a failure. As a result,
+    if (cause instanceof FailureException) {
+      //On FailureException, we know the response is a failure. As a result,
       //we set the status to FAILURE, then inform the MetricsHandler of this
       status = ResponseType.FAILURE;
       ctx.fireChannelRead(status);
@@ -106,53 +104,21 @@ public abstract class ActionHandler extends SimpleChannelInboundHandler<InboundM
       //As always, inform the ProbingStep that we successfully completed this action
       finished.setSuccess();
 
-    } else if (cause instanceof ConnectionException) {
-      //On ConnectionException, we know the response type is an error. As a result,
+    } else {
+      //On UndeterminedStateException, we know the response type is an error. As a result,
       //we set the status to ERROR, then inform the MetricsHandler of this
       status = ResponseType.ERROR;
       ctx.fireChannelRead(status);
 
       //Since it wasn't a success, we still log what caused the ERROR
-      logger.atInfo().log(cause.getMessage());
-      finished.setSuccess();
-
-      //As this was an ERROR in the connection, we must close the channel
-      ChannelFuture closedFuture = ctx.channel().close();
-      closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
-
-    } else if (cause instanceof InternalException){
-      //For an internal error, metrics should not be collected, so we log what caused this, and
-      //inform the ProbingStep the Prober had an internal error on this action
-      logger.atSevere().withCause(cause).log("Severe internal error");
+      logger.atWarning().log(cause.getMessage());
       finished.setFailure(cause);
 
-
-      //As this was an internal error, we must close the channel
+      //As this was an ERROR in performing the action, we must close the channel
       ChannelFuture closedFuture = ctx.channel().close();
       closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
 
-    } else {
-      //In the case of any other kind of error, we assume it is some type of connection ERROR,
-      //so we treat it as such:
-
-      status = ResponseType.ERROR;
-      ctx.fireChannelRead(status);
-
-      logger.atInfo().log(cause.getMessage());
-      finished.setSuccess();
-
-      ChannelFuture closedFuture = ctx.channel().close();
-      closedFuture.addListener(f -> logger.atInfo().log("Unsuccessful channel connection closed"));
     }
-
-
-
-  }
-
-  /**Only exists for testing purposes to see if {@link ActionHandler} displays the expected status's from responses. */
-  @VisibleForTesting
-  ResponseType getStatus() {
-    return status;
   }
 }
 

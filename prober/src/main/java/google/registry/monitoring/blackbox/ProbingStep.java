@@ -18,8 +18,8 @@ import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.connection.ProbingAction;
 import google.registry.monitoring.blackbox.connection.Protocol;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.tokens.Token;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -87,7 +87,7 @@ public abstract class ProbingStep implements Consumer<Token> {
   }
 
   /** Generates a new {@link ProbingAction} from {@code token} modified {@link OutboundMessageType} */
-  private ProbingAction generateAction(Token token) throws InternalException {
+  private ProbingAction generateAction(Token token) throws UndeterminedStateException {
     OutboundMessageType message = token.modifyMessage(messageTemplate());
     ProbingAction.Builder probingActionBuilder = ProbingAction.builder()
         .setDelay(duration())
@@ -115,7 +115,7 @@ public abstract class ProbingStep implements Consumer<Token> {
     //attempt to generate new action. On error, move on to next step
     try {
       currentAction = generateAction(token);
-    } catch(InternalException e) {
+    } catch(UndeterminedStateException e) {
       logger.atWarning().withCause(e).log("Error in Action Generation");
       nextStep.accept(generateNextToken(token));
       return;
@@ -129,7 +129,7 @@ public abstract class ProbingStep implements Consumer<Token> {
     try {
       future = currentAction.call();
 
-    } catch(InternalException e) {
+    } catch(UndeterminedStateException e) {
       logger.atWarning().withCause(e).log("Error in Action Performed");
       nextStep.accept(generateNextToken(token));
       return;

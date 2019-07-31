@@ -21,7 +21,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import google.registry.monitoring.blackbox.ProbingStep;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.handlers.ActionHandler;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import io.netty.bootstrap.Bootstrap;
@@ -142,7 +142,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
    *
    * @return {@link ChannelFuture} that denotes when the action has been successfully performed.
    */
-  public ChannelFuture performAction() throws InternalException {
+  public ChannelFuture performAction() throws UndeterminedStateException {
     Iterator<Map.Entry<String, ChannelHandler>> handlerIterator = channel().pipeline().iterator();
     ActionHandler actionHandler = null;
 
@@ -155,10 +155,10 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
       }
     }
 
-    //If there is no ActionHandler in our pipeline, we have an issue, and throw an InternalException
+    //If there is no ActionHandler in our pipeline, we have an issue, and throw an UndeterminedStateException
     if (actionHandler == null) {
       logger.atSevere().withStackTrace(SMALL).log("ActionHandler not in Channel Pipeline");
-      throw new InternalException("No Action Handler found in pipeline");
+      throw new UndeterminedStateException("No Action Handler found in pipeline");
     }
 
     //ChannelPromise that we use to inform ProbingStep when we are finished.
@@ -181,7 +181,7 @@ public abstract class ProbingAction implements Callable<ChannelFuture> {
 
   /** Method that calls on {@code performAction} when it is certain channel connection is established. */
   @Override
-  public ChannelFuture call() throws InternalException {
+  public ChannelFuture call() throws UndeterminedStateException {
     //ChannelPromise that we return
     ChannelPromise finished = channel().newPromise();
 

@@ -16,7 +16,7 @@ package google.registry.monitoring.blackbox.tokens;
 
 import com.google.common.collect.ImmutableList;
 import google.registry.monitoring.blackbox.modules.WebWhoisModule.WebWhoisProtocol;
-import google.registry.monitoring.blackbox.exceptions.InternalException;
+import google.registry.monitoring.blackbox.exceptions.UndeterminedStateException;
 import google.registry.monitoring.blackbox.messages.OutboundMessageType;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -59,7 +59,7 @@ public class WebWhoisToken extends Token {
 
   /** Modifies message to reflect the new host coming from the new top level domain. */
   @Override
-  public OutboundMessageType modifyMessage(OutboundMessageType original) throws InternalException {
+  public OutboundMessageType modifyMessage(OutboundMessageType original) throws UndeterminedStateException {
     return original.modifyMessage(getHost());
   }
 
