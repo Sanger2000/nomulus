@@ -39,7 +39,8 @@ public class MetricsCollector {
   private static final ImmutableSet<LabelDescriptor> LABELS =
       ImmutableSet.of(
           LabelDescriptor.create("protocol", "Name of the protocol."),
-          LabelDescriptor.create("action", "type of action"));
+          LabelDescriptor.create("action", "type of action"),
+          LabelDescriptor.create("responseType", "Status of action performed"));
 
   static final IncrementableMetric responsesCounter =
       MetricRegistryImpl.getDefault()
@@ -47,31 +48,16 @@ public class MetricsCollector {
               "/prober/responses",
               "Total number of responses received by the backend.",
               "Responses",
-              ImmutableSet.<LabelDescriptor>builder()
-                  .addAll(LABELS)
-                  .add(LabelDescriptor.create("responseType", "Status of action performed"))
-                  .build());
+              LABELS);
 
-  static final EventMetric latencyOverallMs =
-      MetricRegistryImpl.getDefault()
-          .newEventMetric(
-              "/prober/latency_overall_ms",
-              "Round-trip time between a request sent and its corresponding response received.",
-              "Latency Milliseconds",
-              LABELS,
-              DEFAULT_LATENCY_FITTER);
-
-  static final EventMetric latencySpecificMs =
+  static final EventMetric latencyMs =
       MetricRegistryImpl.getDefault()
           .newEventMetric(
               "/prober/latency_specific_ms",
               "Round-trip time between a request sent and its corresponding response received.",
               "Latency Milliseconds",
-              ImmutableSet.<LabelDescriptor>builder()
-                  .addAll(LABELS)
-                  .add(LabelDescriptor.create("responseType", "Status of action performed"))
-                  .build(),
-          DEFAULT_LATENCY_FITTER);
+              LABELS,
+              DEFAULT_LATENCY_FITTER);
 
 
   @Inject
@@ -85,14 +71,12 @@ public class MetricsCollector {
    */
   void resetMetric() {
     responsesCounter.reset();
-    latencyOverallMs.reset();
-    latencySpecificMs.reset();
+    latencyMs.reset();
   }
 
   @NonFinalForTesting
   public void recordResult(String protocolName, String actionName, ResponseType response, long latency) {
-    latencyOverallMs.record(latency, protocolName, actionName);
-    latencySpecificMs.record(latency, protocolName, actionName, response.name());
+    latencyMs.record(latency, protocolName, actionName, response.name());
     responsesCounter.increment(protocolName, actionName, response.name());
   }
 }
