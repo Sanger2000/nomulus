@@ -45,7 +45,7 @@ import org.joda.time.Duration;
 /** Utility class for various helper methods used in testing. */
 public class TestUtils {
 
-  static FullHttpRequest makeHttpPostRequest(String content, String host, String path) {
+  public static FullHttpRequest makeHttpPostRequest(String content, String host, String path) {
     ByteBuf buf = Unpooled.wrappedBuffer(content.getBytes(US_ASCII));
     FullHttpRequest request =
         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, path, buf);
